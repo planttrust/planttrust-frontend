@@ -1,0 +1,20 @@
+﻿# CODEOWNERS — PlanTrust Frontend
+# Automatically requests the right reviewer when a PR touches a module's pages.
+
+# Each member owns their module's pages
+/src/app/auth/              @planttrust/module-1-user-management
+/src/app/marketplace/       @planttrust/module-2-marketplace
+/src/app/chatbot/           @planttrust/module-3-mcp-ai
+/src/app/company/           @planttrust/module-4-company-geofencing
+/src/app/dashboard/         @planttrust/module-5-blockchain-audit
+
+# Shared components, lib, layout, config
+/src/components/    @planttrust/planttrust-devs
+/src/lib/           @planttrust/planttrust-devs
+/src/app/layout.js  @planttrust/planttrust-devs
+/src/app/page.js    @planttrust/planttrust-devs
+
+# Repo-level config
+/.github/           @planttrust/planttrust-devs
+Dockerfile          @planttrust/planttrust-devs
+.gitignore          @planttrust/planttrust-devs
