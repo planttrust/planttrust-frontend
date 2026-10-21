@@ -1,6 +1,6 @@
 'use client';
 
-/* ─── PlanTrust Platform Landing Page & Developer Hub ─────────────────────
+/* ─── PlanTrust Platform Landing Page & Developer Hub (TypeScript) ─────────
  * Entry point for the frontend, connecting all 5 modules and providing
  * live backend health inspection, quick access to module workspaces, and
  * architecture verification.
@@ -9,11 +9,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import type { HealthResponse } from '@/types';
 
 export default function Home() {
-  const [healthData, setHealthData] = useState(null);
+  const [healthData, setHealthData] = useState<HealthResponse | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
-  const [latency, setLatency] = useState(null);
+  const [latency, setLatency] = useState<number | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -27,7 +28,7 @@ export default function Home() {
           setHealthData(res);
           setHealthLoading(false);
         }
-      } catch (err) {
+      } catch (err: any) {
         if (!ignore) {
           setHealthData({ status: 'offline', error: err.message });
           setLatency(null);
@@ -101,22 +102,22 @@ export default function Home() {
 
   return (
     <div className="home-container">
-      {/* ─── Hero Section ─────────────────────────────────────────────── */}
-      <section className="hero-section">
-        <div className="hero-badge-wrap">
+      {/* Hero Section */}
+      <section className="hero-section text-center py-12">
+        <div className="hero-badge-wrap flex justify-center gap-2 mb-4">
           <span className="badge badge-cyan">PlanTrust Core Platform</span>
           <span className="badge badge-emerald">XRPL Testnet Integration</span>
-          <span className="badge badge-purple">5 Modules Unified</span>
+          <span className="badge badge-purple">TypeScript + Tailwind</span>
         </div>
-        <h1 className="hero-title">
+        <h1 className="hero-title text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
           Blockchain-Anchored Land Investment Platform
         </h1>
-        <p className="hero-subtitle">
+        <p className="hero-subtitle text-lg text-slate-300 max-w-2xl mx-auto mb-8">
           Secure, transparent agricultural and commercial land investments backed by smart escrow,
           polygon geofencing, explainable AI fraud detection, and cryptographic XRPL Merkle proofs.
         </p>
 
-        <div className="hero-cta-group">
+        <div className="hero-cta-group flex flex-wrap justify-center gap-4">
           <Link href="/marketplace" className="btn btn-primary">
             Explore Marketplace (M2) →
           </Link>
@@ -129,7 +130,7 @@ export default function Home() {
         </div>
 
         {/* System Stats Bar */}
-        <div className="stats-bar">
+        <div className="stats-bar mt-12 grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="stat-card">
             <div className="stat-val">5 / 5</div>
             <div className="stat-label">Modules Ready</div>
@@ -144,13 +145,13 @@ export default function Home() {
           </div>
           <div className="stat-card">
             <div className="stat-val">100%</div>
-            <div className="stat-label">5-Layer Architecture</div>
+            <div className="stat-label">TypeScript Stack</div>
           </div>
         </div>
       </section>
 
-      {/* ─── Live Backend Health Inspector ────────────────────────────── */}
-      <section className="health-inspector-card">
+      {/* Live Backend Health Inspector */}
+      <section className="health-inspector-card mb-12">
         <div className="health-inspector-header">
           <div>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -170,7 +171,7 @@ export default function Home() {
                 const elapsed = Math.round(performance.now() - start);
                 setLatency(elapsed);
                 setHealthData(res);
-              } catch (err) {
+              } catch (err: any) {
                 setHealthData({ status: 'offline', error: err.message });
                 setLatency(null);
               } finally {
@@ -222,8 +223,8 @@ export default function Home() {
         )}
       </section>
 
-      {/* ─── Module Engineering Workspaces ────────────────────────────── */}
-      <section className="section-wrap">
+      {/* Module Engineering Workspaces */}
+      <section className="section-wrap mb-12">
         <div className="section-header">
           <div>
             <span className="badge badge-emerald">Team Engineering Hub</span>
@@ -273,8 +274,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── Cross-Module Lifecycle Flow ──────────────────────────────── */}
-      <section className="section-wrap">
+      {/* Cross-Module Lifecycle Flow */}
+      <section className="section-wrap mb-12">
         <div className="section-header">
           <span className="badge badge-purple">System Execution Pipeline</span>
           <h2>End-to-End Investment Lifecycle</h2>
@@ -314,7 +315,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── Developer Quick Start ────────────────────────────────────── */}
+      {/* Developer Quick Start */}
       <section className="section-wrap dev-quickstart">
         <div className="section-header">
           <span className="badge badge-cyan">Developer Quickstart</span>

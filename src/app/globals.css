@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ─── PlanTrust Global Design System ─────────────────────────────────────
  * Premium Glassmorphism & High-Trust Blockchain Visual Hierarchy
  * ──────────────────────────────────────────────────────────────────────── */

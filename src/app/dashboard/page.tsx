@@ -8,28 +8,30 @@
 
 import { useState } from 'react';
 import ModuleContractBanner from '@/components/ModuleContractBanner';
+import TrustRadarChart from '@/components/TrustRadarChart';
 import { api } from '@/lib/api';
 import { mockAuditTrail, mockTrustIndex } from '@/lib/mockData';
+import type { AuditEvent, TrustIndex, MerkleProofResult } from '@/types';
 
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState('audit'); // 'audit' | 'trust-index' | 'verifier'
+  const [activeTab, setActiveTab] = useState<'audit' | 'trust-index' | 'verifier'>('audit');
 
   // Audit filter state
   const [auditQuery, setAuditQuery] = useState('');
-  const [auditList, setAuditList] = useState(mockAuditTrail);
+  const [auditList, setAuditList] = useState<AuditEvent[]>(mockAuditTrail);
 
   // Trust Index state
-  const [trustData] = useState(mockTrustIndex);
+  const [trustData] = useState<TrustIndex>(mockTrustIndex);
 
   // Proof Verifier state
   const [verifyInput, setVerifyInput] = useState(
     'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
   );
   const [verifying, setVerifying] = useState(false);
-  const [verifyResult, setVerifyResult] = useState(null);
+  const [verifyResult, setVerifyResult] = useState<MerkleProofResult | null>(null);
 
   // Filter audit records
-  const handleSearchAudit = (e) => {
+  const handleSearchAudit = (e: React.FormEvent) => {
     e.preventDefault();
     const q = auditQuery.trim().toLowerCase();
     if (!q) {
@@ -41,13 +43,13 @@ export default function DashboardPage() {
         item.eventType.toLowerCase().includes(q) ||
         item.sourceModule.toLowerCase().includes(q) ||
         item.dataHash.toLowerCase().includes(q) ||
-        item.anchorId.toLowerCase().includes(q)
+        (item.anchorId ? item.anchorId.toLowerCase().includes(q) : false)
     );
     setAuditList(filtered);
   };
 
   // Verify Proof
-  const handleVerifyProof = async (e) => {
+  const handleVerifyProof = async (e: React.FormEvent) => {
     e.preventDefault();
     setVerifying(true);
 
@@ -116,16 +118,19 @@ export default function DashboardPage() {
       {/* ─── TAB 1: Audit Trail ───────────────────────────────────────── */}
       {activeTab === 'audit' && (
         <div>
-          <div className="glass-card" style={{ marginBottom: '1.5rem' }}>
+          <div className="glass-card mb-6">
             <div className="card-header">
-              <h3>Searchable Immutable Audit Trail</h3>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Searchable Immutable Audit Trail</h3>
+                <p className="text-xs text-slate-400">Ledger records cryptographically anchored to XRPL Testnet</p>
+              </div>
               <span className="badge badge-cyan">XRPL Testnet Merkle Anchored</span>
             </div>
 
             <form onSubmit={handleSearchAudit} className="search-bar-row">
               <input
                 type="text"
-                className="form-input"
+                className="form-input flex-1"
                 placeholder="Search by Event Type, Module (e.g. M1, M2), or SHA-256 Hash..."
                 value={auditQuery}
                 onChange={(e) => setAuditQuery(e.target.value)}
@@ -152,16 +157,16 @@ export default function DashboardPage() {
                 <tbody>
                   {auditList.map((item) => (
                     <tr key={item.id}>
-                      <td style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+                      <td className="text-xs whitespace-nowrap">
                         {new Date(item.timestamp).toLocaleDateString()}{' '}
                         {new Date(item.timestamp).toLocaleTimeString()}
                       </td>
                       <td>
                         <span className="badge badge-emerald">{item.sourceModule}</span>
                       </td>
-                      <td style={{ fontWeight: 600 }}>{item.eventType}</td>
+                      <td className="font-semibold">{item.eventType}</td>
                       <td><code>{item.entityId}</code></td>
-                      <td style={{ fontSize: '0.75rem', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <td className="text-xs max-w-[140px] truncate">
                         <code>{item.dataHash}</code>
                       </td>
                       <td>
@@ -172,8 +177,7 @@ export default function DashboardPage() {
                               href={`https://testnet.xrpl.org/transactions/${h}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="link-btn"
-                              style={{ fontSize: '0.78rem' }}
+                              className="link-btn text-xs"
                             >
                               {h.slice(0, 10)}... ↗
                             </a>
@@ -191,100 +195,120 @@ export default function DashboardPage() {
 
       {/* ─── TAB 2: Digital Trust Index ───────────────────────────────── */}
       {activeTab === 'trust-index' && (
-        <div className="two-col-layout">
-          {/* Composite Score Card */}
-          <div className="glass-card">
-            <div className="card-header">
-              <h3>Digital Trust Index (Weighted AI Composite)</h3>
-              <span className="badge badge-emerald">Grade {trustData.grade}</span>
+        <div className="space-y-6">
+          <div className="two-col-layout">
+            {/* Composite Score Card */}
+            <div className="glass-card">
+              <div className="card-header">
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Digital Trust Index</h3>
+                  <p className="text-xs text-slate-400">Weighted AI Composite Institutional Rating</p>
+                </div>
+                <span className="badge badge-emerald">Grade {trustData.grade}</span>
+              </div>
+
+              <div className="trust-hero-score my-4">
+                <div className="trust-number-circle">
+                  <span className="big-num">{trustData.score}</span>
+                  <span className="big-denom">/ 100</span>
+                </div>
+                <div className="trust-score-meta">
+                  <h4 className="text-white font-semibold">Institutional Grade Rating</h4>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Evaluated across corporate KYC registry, escrow state discipline, CBSL fraud heuristics, and geofence proof-of-reality.
+                  </p>
+                </div>
+              </div>
+
+              {/* Formula Explanation */}
+              <div className="info-box mt-4">
+                <strong>Mathematical Formulation:</strong>
+                <div className="font-mono text-xs text-emerald-400 mt-1">
+                  TrustIndex = w₁(KYC) + w₂(Escrow) - w₃(ScamFlags) + w₄(Milestones)
+                </div>
+              </div>
             </div>
 
-            <div className="trust-hero-score">
-              <div className="trust-number-circle">
-                <span className="big-num">{trustData.score}</span>
-                <span className="big-denom">/ 100</span>
+            {/* Component Factor Breakdown */}
+            <div className="glass-card">
+              <div className="card-header">
+                <h3 className="text-lg font-semibold text-white">Component Factor Breakdown</h3>
+                <span className="badge badge-subtle">4 Factors</span>
               </div>
-              <div className="trust-score-meta">
-                <h4>Institutional Grade Rating</h4>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  Evaluated across KYC registry, escrow state discipline, CBSL fraud heuristics, and geofence proof-of-reality.
-                </p>
-              </div>
-            </div>
 
-            {/* Formula Explanation */}
-            <div className="info-box" style={{ marginTop: '1.5rem' }}>
-              <strong>Mathematical Formulation:</strong>
-              <div style={{ fontFamily: 'monospace', fontSize: '0.85rem', marginTop: '0.25rem' }}>
-                TrustIndex = w₁(KYC) + w₂(Escrow) - w₃(ScamFlags) + w₄(Milestones)
+              <div className="factor-breakdown-stack space-y-4 mt-2">
+                <div className="factor-item">
+                  <div className="factor-header flex justify-between text-xs mb-1">
+                    <span className="text-slate-300">Module 1: Corporate KYC & Deed Registry</span>
+                    <span className="text-emerald font-bold">
+                      {trustData.components.kycVerification} / 25
+                    </span>
+                  </div>
+                  <div className="progress-track">
+                    <div
+                      className="progress-fill"
+                      style={{ width: `${(trustData.components.kycVerification / 25) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="factor-item">
+                  <div className="factor-header flex justify-between text-xs mb-1">
+                    <span className="text-slate-300">Module 2: Escrow Capital Protection & Lock</span>
+                    <span className="text-emerald font-bold">
+                      {trustData.components.escrowDiscipline} / 30
+                    </span>
+                  </div>
+                  <div className="progress-track">
+                    <div
+                      className="progress-fill"
+                      style={{ width: `${(trustData.components.escrowDiscipline / 30) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="factor-item">
+                  <div className="factor-header flex justify-between text-xs mb-1">
+                    <span className="text-slate-300">Module 3: Scam Classifier Penalty</span>
+                    <span className="text-emerald font-bold">
+                      0 Penalty (Clean)
+                    </span>
+                  </div>
+                  <div className="progress-track">
+                    <div className="progress-fill" style={{ width: '100%', background: '#10b981' }}></div>
+                  </div>
+                </div>
+
+                <div className="factor-item">
+                  <div className="factor-header flex justify-between text-xs mb-1">
+                    <span className="text-slate-300">Module 4: Milestone Geofence Proof-of-Reality</span>
+                    <span className="text-emerald font-bold">
+                      {trustData.components.milestoneReality} / 40
+                    </span>
+                  </div>
+                  <div className="progress-track">
+                    <div
+                      className="progress-fill"
+                      style={{ width: `${(trustData.components.milestoneReality / 40) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Component Breakdown Card */}
+          {/* Recharts Interactive Radar Chart Section */}
           <div className="glass-card">
             <div className="card-header">
-              <h3>Component Factor Breakdown</h3>
-              <span className="badge badge-subtle">4 Factors</span>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Trust Component Multi-Factor Radar</h3>
+                <p className="text-xs text-slate-400">Interactive SVG analysis powered by Recharts</p>
+              </div>
+              <span className="badge badge-purple">Recharts Visualizer</span>
             </div>
 
-            <div className="factor-breakdown-stack">
-              <div className="factor-item">
-                <div className="factor-header">
-                  <span>Module 1: Corporate KYC & Deed Registry</span>
-                  <span className="text-emerald font-bold">
-                    {trustData.components.kycVerification} / 25
-                  </span>
-                </div>
-                <div className="progress-track">
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${(trustData.components.kycVerification / 25) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="factor-item">
-                <div className="factor-header">
-                  <span>Module 2: Escrow Capital Protection & Lock</span>
-                  <span className="text-emerald font-bold">
-                    {trustData.components.escrowDiscipline} / 30
-                  </span>
-                </div>
-                <div className="progress-track">
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${(trustData.components.escrowDiscipline / 30) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="factor-item">
-                <div className="factor-header">
-                  <span>Module 3: Scam Classifier Penalty</span>
-                  <span className="text-emerald font-bold">
-                    0 Penalty (Clean)
-                  </span>
-                </div>
-                <div className="progress-track">
-                  <div className="progress-fill" style={{ width: '100%', background: '#10b981' }}></div>
-                </div>
-              </div>
-
-              <div className="factor-item">
-                <div className="factor-header">
-                  <span>Module 4: Milestone Geofence Proof-of-Reality</span>
-                  <span className="text-emerald font-bold">
-                    {trustData.components.milestoneReality} / 40
-                  </span>
-                </div>
-                <div className="progress-track">
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${(trustData.components.milestoneReality / 40) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
+            <div className="p-2">
+              <TrustRadarChart components={trustData.components} />
             </div>
           </div>
         </div>
@@ -295,10 +319,12 @@ export default function DashboardPage() {
         <div className="two-col-layout">
           <div className="glass-card">
             <div className="card-header">
-              <h3>Cryptographic Merkle Proof Verifier</h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                Target: <code>GET /api/audit/verify/:anchorId</code> or <code>/api/verify/:hash</code>
-              </p>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Cryptographic Merkle Proof Verifier</h3>
+                <p className="text-xs text-slate-400">
+                  Target: <code>GET /api/audit/verify/:anchorId</code> or <code>/api/verify/:hash</code>
+                </p>
+              </div>
             </div>
 
             <form onSubmit={handleVerifyProof} className="form-stack">
@@ -313,11 +339,10 @@ export default function DashboardPage() {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+              <div className="flex gap-2 mb-4">
                 <button
                   type="button"
-                  className="btn btn-ghost"
-                  style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
+                  className="btn btn-ghost text-xs px-2 py-1"
                   onClick={() =>
                     setVerifyInput('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855')
                   }
@@ -326,8 +351,7 @@ export default function DashboardPage() {
                 </button>
                 <button
                   type="button"
-                  className="btn btn-ghost"
-                  style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
+                  className="btn btn-ghost text-xs px-2 py-1"
                   onClick={() => setVerifyInput('anc-m1-7781-merkle')}
                 >
                   Load Anchor ID Sample
@@ -337,8 +361,7 @@ export default function DashboardPage() {
               <button
                 type="submit"
                 disabled={verifying}
-                className="btn btn-primary"
-                style={{ width: '100%' }}
+                className="btn btn-primary w-full"
               >
                 {verifying ? 'Verifying Merkle Path...' : 'Verify Cryptographic Proof on XRPL'}
               </button>
@@ -348,7 +371,7 @@ export default function DashboardPage() {
           {/* Verification Result */}
           <div className="glass-card">
             <div className="card-header">
-              <h3>On-Chain Inclusion Proof Status</h3>
+              <h3 className="text-lg font-semibold text-white">On-Chain Inclusion Proof Status</h3>
               {verifyResult && (
                 <span className={`badge ${verifyResult.verified ? 'badge-emerald' : 'badge-rose'}`}>
                   {verifyResult.verified ? 'Cryptographically Proven' : 'Verification Failed'}
@@ -360,7 +383,7 @@ export default function DashboardPage() {
               <div>
                 <div className="meta-row">
                   <span className="meta-key">Merkle Root:</span>
-                  <span className="meta-val" style={{ fontSize: '0.75rem', wordBreak: 'break-all' }}>
+                  <span className="meta-val text-xs break-all">
                     <code>{verifyResult.merkleRoot}</code>
                   </span>
                 </div>
@@ -372,7 +395,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="meta-row">
                   <span className="meta-key">XRPL Transaction:</span>
-                  <span className="meta-val" style={{ fontSize: '0.75rem', wordBreak: 'break-all' }}>
+                  <span className="meta-val text-xs break-all">
                     <a
                       href={verifyResult.explorerUrl}
                       target="_blank"
@@ -384,7 +407,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
 
-                <div className="alert-box alert-emerald" style={{ marginTop: '1.25rem' }}>
+                <div className="alert-box alert-emerald mt-5">
                   Event is mathematically guaranteed to have existed at ledger commitment timestamp without tampering.
                 </div>
               </div>

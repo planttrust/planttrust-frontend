@@ -1,6 +1,6 @@
 'use client';
 
-/* ─── ModuleContractBanner ────────────────────────────────────────────────
+/* ─── ModuleContractBanner (TypeScript + Tailwind) ────────────────────────
  * Developer HUD shown at the top of each module page.
  * Provides instant visibility into:
  * - Module owner & full-stack responsibilities
@@ -11,6 +11,30 @@
 import { useState } from 'react';
 import { api } from '@/lib/api';
 
+export interface EndpointSpec {
+  method: string;
+  path: string;
+  desc: string;
+}
+
+interface ModuleContractBannerProps {
+  moduleNumber: string | number;
+  moduleName: string;
+  owner: string;
+  effortScore: string | number;
+  aiFeature: string;
+  blockchainFeature: string;
+  endpoints?: EndpointSpec[];
+  contractFileName: string;
+}
+
+interface TestResult {
+  ok: boolean;
+  status: string | number;
+  latency: string;
+  message: string;
+}
+
 export default function ModuleContractBanner({
   moduleNumber,
   moduleName,
@@ -20,14 +44,14 @@ export default function ModuleContractBanner({
   blockchainFeature,
   endpoints = [],
   contractFileName,
-}) {
-  const [testResults, setTestResults] = useState({});
+}: ModuleContractBannerProps) {
+  const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
   const [testing, setTesting] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   const testEndpoints = async () => {
     setTesting(true);
-    const results = {};
+    const results: Record<string, TestResult> = {};
     for (const ep of endpoints) {
       const start = performance.now();
       try {
@@ -39,7 +63,7 @@ export default function ModuleContractBanner({
           latency: `${duration}ms`,
           message: res?.message || 'OK',
         };
-      } catch (err) {
+      } catch (err: any) {
         const duration = Math.round(performance.now() - start);
         results[ep.path] = {
           ok: false,

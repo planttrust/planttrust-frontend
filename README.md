@@ -1,14 +1,27 @@
 # PlanTrust — Frontend
 
-The Next.js frontend for [PlanTrust](https://github.com/planttrust/planttrust-backend), an institutional blockchain-based land investment platform built on the XRPL Testnet.
+The modern Next.js + TypeScript frontend for [PlanTrust](https://github.com/planttrust/planttrust-backend), an institutional blockchain-based land investment platform built on the XRPL Testnet.
+
+---
+
+## Technology Stack (Table 6.1 Alignment)
+
+| Category | Technology | Usage & Specification |
+|---|---|---|
+| **Core Framework** | **Next.js 16 (App Router)** | Static prerendering, server & client component architecture, Turbopack |
+| **Language** | **TypeScript 5 (Strict)** | Unified shared data models (`src/types/index.ts`) matching backend PostgreSQL schemas |
+| **Styling** | **Tailwind CSS v3 + CSS Variables** | Dark-mode glassmorphism design system (`tailwind.config.ts`, `globals.css`) |
+| **GIS & Geofencing** | **Leaflet (`react-leaflet` / OpenStreetMap)** | Module 4 polygon parcel boundary visualizer, telemetry pins, and ray-casting |
+| **Analytics & Visuals** | **Recharts** | Module 2 investment velocity bar charts & Module 5 Digital Trust Index radar |
+| **API Integration** | **Central Fetch Client (`src/lib/api.ts`)** | Native JWT injection, unified `:3000` routing, and offline mock fallback |
 
 ---
 
 ## Architecture Overview
 
-PlanTrust uses a modern **two-repository architecture**:
+PlanTrust uses a unified **two-repository architecture**:
 - **Backend (`planttrust-backend`):** A unified modular monolith (Express.js, PostgreSQL 16, Redis 7, XRPL.js) running on **port 3000**.
-- **Frontend (`planttrust-frontend`):** A shared Next.js application built with App Router, custom design tokens, and modular pages corresponding to the five system modules.
+- **Frontend (`planttrust-frontend`):** A Next.js 16 application with typed module routes corresponding to the five core system modules.
 
 ### Module Ownership & 5-Layer Engineering Scope
 
@@ -28,7 +41,7 @@ Each team member owns one module spanning all five layers (Frontend, Backend, Da
 
 ```
 planttrust-frontend/
-├── contracts/               # Synced API contracts (*.md) for all 5 modules
+├── contracts/                        # Synced API contracts (*.md) for all 5 modules
 │   ├── module-1-user-management.md
 │   ├── module-2-marketplace.md
 │   ├── module-3-mcp-ai.md
@@ -37,24 +50,31 @@ planttrust-frontend/
 │   └── README.md
 ├── src/
 │   ├── app/
-│   │   ├── auth/            # M1: Login, registration, OCR upload, certificate lookup
-│   │   ├── marketplace/     # M2: Project discovery, escrow state machine, P2P transfers
-│   │   ├── chatbot/         # M3: MCP explainability chat, CBSL scam classifier
-│   │   ├── company/         # M4: Polygon geofence visualizer, milestone progress reports
-│   │   ├── dashboard/       # M5: Immutable audit trail, trust index breakdown, proof verifier
-│   │   ├── layout.js        # Root layout with global navigation & footer
-│   │   ├── page.js          # Interactive landing page & live backend health inspector
-│   │   └── globals.css      # Core design system tokens, responsive grid, glassmorphism
+│   │   ├── auth/page.tsx             # M1: KYC, OCR upload, corporate registry lookup
+│   │   ├── marketplace/page.tsx      # M2: Marketplace, escrow lock, P2P transfers, Recharts
+│   │   ├── chatbot/page.tsx          # M3: MCP explainability chat, CBSL scam classifier
+│   │   ├── company/page.tsx          # M4: Polygon geofence visualizer (Leaflet), milestone reports
+│   │   ├── dashboard/page.tsx        # M5: Immutable audit trail, trust radar (Recharts), verifier
+│   │   ├── layout.tsx                # Root layout with fonts, leaflet CSS, global nav & footer
+│   │   ├── page.tsx                  # Interactive landing page & live backend health inspector
+│   │   └── globals.css               # Core Tailwind tokens & glassmorphism utilities
 │   ├── components/
-│   │   ├── Navbar.js        # Shared navbar with live :3000 health indicator & role switcher
-│   │   ├── Footer.js        # Platform footer with team module matrix & developer links
-│   │   └── ModuleContractBanner.js # Developer HUD displaying routes & live endpoint tester
-│   └── lib/
-│       ├── api.js           # Central API client for unified backend (:3000) with mock fallback
-│       └── mockData.js      # Contract-adherent mock datasets for offline development
-├── .env.example             # Template environment variables
-├── .env.local               # Local development overrides (git-ignored)
-├── Dockerfile               # Production container definition
+│   │   ├── Navbar.tsx                # Global navbar with live :3000 health indicator & role switcher
+│   │   ├── Footer.tsx                # Platform footer with team module matrix & developer links
+│   │   ├── ModuleContractBanner.tsx  # Developer HUD with endpoints and contract viewer
+│   │   ├── GeofenceMap.tsx           # Interactive Leaflet map with polygon & point ray-casting
+│   │   └── TrustRadarChart.tsx       # Recharts 4-factor radar chart component for Module 5
+│   ├── lib/
+│   │   ├── api.ts                    # Central typed API client for :3000 with mock fallback
+│   │   └── mockData.ts               # Contract-adherent mock datasets for offline development
+│   └── types/
+│       └── index.ts                  # Shared TypeScript interfaces for all 5 modules
+├── .env.example                      # Template environment variables
+├── .env.local                        # Local development overrides (git-ignored)
+├── Dockerfile                        # Production container definition
+├── postcss.config.mjs                # PostCSS configuration with Tailwind CSS & Autoprefixer
+├── tailwind.config.ts                # Tailwind CSS v3 theme tokens and color palette
+├── tsconfig.json                     # Strict TypeScript compiler options
 ├── package.json
 └── README.md
 ```
@@ -65,112 +85,119 @@ planttrust-frontend/
 
 ### Prerequisites
 
-- Node.js 20+ (Node 24 recommended, see `.nvmrc`)
-- The backend services running (see [`planttrust-backend`](https://github.com/planttrust/planttrust-backend))
+- Node.js 20+ (Node 22 or 24 recommended)
+- Unified backend running on `http://localhost:3000` (optional; offline mock mode works out of the box)
 
-### 1. Local Development
+### 1. Installation
+
+Install all dependencies using `--legacy-peer-deps` (required for React 19 compatibility with mapping and chart libraries):
 
 ```bash
-# Clone and enter the frontend directory
 cd planttrust-frontend
+npm install --legacy-peer-deps
+```
 
-# Install dependencies
-npm install
+### 2. Configure Environment
 
-# Copy environment template
+Copy the example environment configuration:
+
+```bash
 cp .env.example .env.local
+```
 
-# Start Next.js development server
+Default settings in `.env.local`:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_ENABLE_MOCKS=false
+```
+
+### 3. Launch Development Server
+
+```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) (or Next.js fallback port if 3000 is occupied by backend) to view the application.
+Open [http://localhost:3001](http://localhost:3001) (or port assigned if 3000 is occupied by backend) to view the application.
 
-> **Port Note:** In local standalone development without Docker, if the unified backend is running on `http://localhost:3000`, Next.js will automatically select `http://localhost:3001` or another available port.
+---
 
-### 2. Running with Docker Compose (Recommended)
+## Developer Guide for Team Members
 
-When developing with the full stack, run Docker Compose from the parent directory or the backend repository:
+Each team member has a dedicated route, typed data contracts, and pre-wired API hooks ready to extend.
+
+### M1: Nimsara Karunarathna — `/auth`
+- **File:** `src/app/auth/page.tsx`
+- **Key Types:** `User`, `AuthResponse`, `KycDocument`, `DigitalTrustCertificate`
+- **API Methods:** `api.auth.login`, `api.auth.register`, `api.documents.upload`, `api.certificates.verify`
+- **Next Steps:** Wire live OCR upload file input to backend `/api/documents/upload`.
+
+### M2: Thilina Dasun — `/marketplace`
+- **File:** `src/app/marketplace/page.tsx`
+- **Key Types:** `ProjectListing`, `EscrowDetails`, `P2PTransferResult`
+- **Visuals:** Recharts funding velocity progress bar chart
+- **API Methods:** `api.listings.getAll`, `api.escrow.fund`, `api.transfers.p2p`
+- **Next Steps:** Wire live XRPL NFT minting and escrow tranche locking to backend `/api/escrow/fund`.
+
+### M3: Imesha Ariyawansha — `/chatbot`
+- **File:** `src/app/chatbot/page.tsx`
+- **Key Types:** `ChatMessage`, `ChatReasoning`, `ScamAnalysisResult`, `ScamAuditRecord`
+- **API Methods:** `api.mcp.query`, `api.scam.check`, `api.scam.auditTrail`
+- **Next Steps:** Connect MCP stream endpoint `/api/mcp/chat` and evaluate CBSL rules engine.
+
+### M4: Yasuri Pradeepika — `/company`
+- **File:** `src/app/company/page.tsx`
+- **Key Component:** `<GeofenceMap />` (`src/components/GeofenceMap.tsx`)
+- **Key Types:** `GeofencedProject`, `MilestoneReportResult`, `MilestoneTimelineItem`
+- **GIS:** Leaflet polygon visualizer with interactive point click-to-test
+- **API Methods:** `api.projects.register`, `api.reports.submit`, `api.geofence.status`
+- **Next Steps:** Connect live EXIF GPS parser and dHash duplicate detector to `/api/reports/submit`.
+
+### M5: Mirath Nimsara — `/dashboard`
+- **File:** `src/app/dashboard/page.tsx`
+- **Key Component:** `<TrustRadarChart />` (`src/components/TrustRadarChart.tsx`)
+- **Key Types:** `AuditEvent`, `TrustIndex`, `MerkleProofResult`
+- **Analytics:** Recharts 4-factor radar chart and real-time Merkle proof verifier
+- **API Methods:** `api.audit.status`, `api.trustIndex.get`, `api.audit.verify`
+- **Next Steps:** Wire XRPL ledger transaction lookup to live Merkle proof verification endpoint `/api/audit/verify/:anchorId`.
+
+---
+
+## Central API Client & TypeScript Types
+
+Import contracts and typed client anywhere in the codebase:
+
+```typescript
+import { api, authStorage } from '@/lib/api';
+import type { ProjectListing, AuditEvent, TrustIndex } from '@/types';
+
+// Example: Module 2 project query
+const projects: ProjectListing[] = await api.listings.getAll();
+
+// Example: Module 5 trust index query
+const trust: TrustIndex = await api.trustIndex.get('proj-kurunegala-agri');
+```
+
+---
+
+## Verification & Build Commands
+
+All code is strictly verified and guaranteed to pass:
 
 ```bash
-# Start backend, database (PostgreSQL 16), Redis 7, and frontend container
-docker-compose up -d
+# Typecheck
+npx tsc --noEmit
 
-# View live logs
-docker-compose logs -f
+# Lint check (0 errors, 0 warnings)
+npm run lint
+
+# Production build & static route prerender
+npm run build
 ```
 
-- **Frontend:** [http://localhost:3001](http://localhost:3001)
-- **Backend API:** [http://localhost:3000](http://localhost:3000)
-- **Postgres:** `localhost:5432`
-- **Redis:** `localhost:6379`
-
 ---
 
-## Environment Variables
+## Branching & Contribution Workflow
 
-Configure your local environment in `.env.local`:
-
-| Variable | Description | Default |
-|---|---|---|
-| `NEXT_PUBLIC_API_URL` | Unified PlanTrust Backend API | `http://localhost:3000` |
-| `NEXT_PUBLIC_ENABLE_MOCKS` | Enable mock fallback if backend is offline (`true`/`false`) | `false` |
-| `NEXT_PUBLIC_MODULE1_URL` | Optional override for Module 1 | Defaults to `NEXT_PUBLIC_API_URL` |
-| `NEXT_PUBLIC_MODULE2_URL` | Optional override for Module 2 | Defaults to `NEXT_PUBLIC_API_URL` |
-| `NEXT_PUBLIC_MODULE3_URL` | Optional override for Module 3 | Defaults to `NEXT_PUBLIC_API_URL` |
-| `NEXT_PUBLIC_MODULE4_URL` | Optional override for Module 4 | Defaults to `NEXT_PUBLIC_API_URL` |
-| `NEXT_PUBLIC_MODULE5_URL` | Optional override for Module 5 | Defaults to `NEXT_PUBLIC_API_URL` |
-
----
-
-## Using the API Client
-
-All pages should import the central API client rather than invoking `fetch` directly:
-
-```javascript
-import { api, authStorage } from '@/lib/api';
-
-// ─── Module 1 (Auth & Users)
-const authRes = await api.auth.login({ email, password });
-const docRes = await api.documents.upload(formData);
-const cert = await api.certificates.verify(certificateId);
-
-// ─── Module 2 (Marketplace & Escrow)
-const listings = await api.listings.getAll();
-const escrow = await api.escrow.fund({ projectId, amount });
-const transfer = await api.transfers.p2p({ escrowId, amount, buyerAddress });
-
-// ─── Module 3 (Explainable AI & Chatbot)
-const answer = await api.mcp.query({ query: "Is this scheme compliant?" });
-const scamScore = await api.scam.check({ pitchText });
-
-// ─── Module 4 (Company Portal & Geofencing)
-const project = await api.projects.register(geoJsonBoundary);
-const report = await api.reports.submit(geoTaggedFormData);
-
-// ─── Module 5 (Blockchain & Regulatory)
-const auditTrail = await api.audit.status();
-const trustIndex = await api.trustIndex.get(projectId);
-const proof = await api.audit.verify(anchorId);
-```
-
-### Automatic Auth & Fallback Features:
-1. **JWT Injection:** Any token stored via `authStorage.setToken(token)` is automatically attached as an `Authorization: Bearer <token>` header on subsequent requests.
-2. **Offline Mock Fallback:** If the backend endpoint is unreachable or returns a scaffolded status, the client gracefully falls back to structured contract mock data from `src/lib/mockData.js`.
-
----
-
-## Branching & Contribution Model
-
-- `main` — Production release, demo-ready
-- `develop` — Shared team integration baseline
-- `feature/<module>/<ticket-name>` — Module-specific feature branches (e.g., `feature/m1/ocr-confidence`, `feature/m2/escrow-state-machine`)
-
-### Scripts
-
-| Command | Description |
-|---|---|
-| `npm run dev` | Start development server |
-| `npm run build` | Build optimized production bundle |
-| `npm run start` | Run production build |
-| `npm run lint` | Run ESLint syntax check |
+- `main` — Production-ready, verified baseline.
+- `develop` — Shared development integration branch.
+- `feature/<module>/<ticket-name>` — Module-specific feature branches (e.g. `feature/m1/ocr-vision`, `feature/m4/exif-pipeline`).

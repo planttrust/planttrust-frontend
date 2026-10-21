@@ -1,43 +1,44 @@
 'use client';
 
-/* ─── Module 1: User Management & Corporate Registry ──────────────────────
+/* ─── Module 1: User Management & Corporate Registry (TypeScript) ─────────
  * Owner: Nimsara Karunarathna
  * Scope: Frontend • Backend • Database • AI (OCR) • Blockchain (Certificates)
  * Base Endpoints: /api/auth, /api/documents, /api/certificates
  * ──────────────────────────────────────────────────────────────────────── */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ModuleContractBanner from '@/components/ModuleContractBanner';
 import { api, authStorage } from '@/lib/api';
 import { mockCertificates } from '@/lib/mockData';
+import type { User, UserRole, DocumentType, DocumentUploadResponse, DigitalTrustCertificate } from '@/types';
 
 export default function AuthPage() {
-  const [activeTab, setActiveTab] = useState('auth'); // 'auth' | 'documents' | 'certificates'
+  const [activeTab, setActiveTab] = useState<'auth' | 'documents' | 'certificates'>('auth');
 
   // Auth Form State
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('aiden.investor@planttrust.org');
   const [password, setPassword] = useState('SecurePass123!');
   const [name, setName] = useState('Aiden Silva');
-  const [role, setRole] = useState('investor');
+  const [role, setRole] = useState<UserRole>('investor');
   const [phone, setPhone] = useState('+94 77 123 4567');
-  const [currentUser, setCurrentUser] = useState(() => (typeof window !== 'undefined' ? authStorage.getUser() : null));
+  const [currentUser, setCurrentUser] = useState<User | null>(() => (typeof window !== 'undefined' ? authStorage.getUser() : null));
   const [authLoading, setAuthLoading] = useState(false);
-  const [authFeedback, setAuthFeedback] = useState(null);
+  const [authFeedback, setAuthFeedback] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
   // Document Upload State
-  const [docType, setDocType] = useState('land_deed');
+  const [docType, setDocType] = useState<DocumentType>('land_deed');
   const [fileName, setFileName] = useState('');
-  const [ocrResult, setOcrResult] = useState(null);
+  const [ocrResult, setOcrResult] = useState<DocumentUploadResponse | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
 
   // Certificate Verification State
   const [searchCertId, setSearchCertId] = useState('PT-CERT-2026-0089');
-  const [foundCert, setFoundCert] = useState(mockCertificates[0]);
+  const [foundCert, setFoundCert] = useState<DigitalTrustCertificate | null>(mockCertificates[0]);
   const [certSearching, setCertSearching] = useState(false);
 
   // Handle Login / Register
-  const handleSubmitAuth = async (e) => {
+  const handleSubmitAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);
     setAuthFeedback(null);
@@ -52,7 +53,7 @@ export default function AuthPage() {
         setCurrentUser(res.user || authStorage.getUser());
         setAuthFeedback({ type: 'success', text: `Account created for ${name}! JWT token issued.` });
       }
-    } catch (err) {
+    } catch (err: any) {
       setAuthFeedback({ type: 'error', text: err.message || 'Authentication failed' });
     } finally {
       setAuthLoading(false);
@@ -66,7 +67,7 @@ export default function AuthPage() {
   };
 
   // Handle OCR Document Upload Simulation
-  const handleUploadDoc = (e) => {
+  const handleUploadDoc = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fileName) {
       alert('Please enter or select a document file');
@@ -103,7 +104,7 @@ export default function AuthPage() {
   };
 
   // Handle Certificate Lookup
-  const handleVerifyCert = (e) => {
+  const handleVerifyCert = (e: React.FormEvent) => {
     e.preventDefault();
     setCertSearching(true);
     setTimeout(() => {
@@ -202,7 +203,7 @@ export default function AuthPage() {
                     <select
                       className="form-input"
                       value={role}
-                      onChange={(e) => setRole(e.target.value)}
+                      onChange={(e) => setRole(e.target.value as UserRole)}
                     >
                       <option value="investor">Investor (Fund projects & secondary market)</option>
                       <option value="company">Company (Register land projects & milestones)</option>
@@ -371,7 +372,7 @@ export default function AuthPage() {
                 <select
                   className="form-input"
                   value={docType}
-                  onChange={(e) => setDocType(e.target.value)}
+                  onChange={(e) => setDocType(e.target.value as DocumentType)}
                 >
                   <option value="land_deed">Land Title Deed / Ownership Grant</option>
                   <option value="company_registration">Certificate of Incorporation (Form 1)</option>
@@ -503,7 +504,6 @@ export default function AuthPage() {
                   <div className="cert-company">{foundCert.companyName}</div>
                 </div>
                 <div className="cert-qr-wrap">
-                  {/* QR Code */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={foundCert.qrCodeUrl}

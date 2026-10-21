@@ -8,19 +8,26 @@
 
 import { useState } from 'react';
 import ModuleContractBanner from '@/components/ModuleContractBanner';
-import { api } from '@/lib/api';
+import GeofenceMap from '@/components/GeofenceMap';
 import { mockGeofencedProjects, mockMilestoneTimeline } from '@/lib/mockData';
+import type { GeofencedProject, MilestoneTimelineItem, MilestoneReportResult } from '@/types';
 
 export default function CompanyPage() {
-  const [activeTab, setActiveTab] = useState('geofence'); // 'geofence' | 'submit' | 'timeline'
+  const [activeTab, setActiveTab] = useState<'geofence' | 'submit' | 'timeline'>('geofence');
 
   // Selected Geofenced Project
-  const [selectedProject, setSelectedProject] = useState(mockGeofencedProjects[0]);
+  const [selectedProject, setSelectedProject] = useState<GeofencedProject>(mockGeofencedProjects[0]);
 
   // Coordinate Ray-Casting Test State
   const [testLat, setTestLat] = useState('7.4867');
   const [testLng, setTestLng] = useState('80.3651');
-  const [rayCastResult, setRayCastResult] = useState(null);
+  const [rayCastResult, setRayCastResult] = useState<{
+    lat: number;
+    lng: number;
+    isInside: boolean;
+    polygonId: string;
+    distanceFromCentroid: string;
+  } | null>(null);
 
   // Milestone Report Submission State
   const [milestoneName, setMilestoneName] = useState('Phase 2 — Drip Irrigation Installation');
@@ -28,36 +35,51 @@ export default function CompanyPage() {
   const [exifLat, setExifLat] = useState('7.4869');
   const [exifLng, setExifLng] = useState('80.3649');
   const [submitting, setSubmitting] = useState(false);
-  const [reportResult, setReportResult] = useState(null);
+  const [reportResult, setReportResult] = useState<MilestoneReportResult | null>(null);
 
   // Timeline State
-  const [timeline, setTimeline] = useState(mockMilestoneTimeline);
+  const [timeline, setTimeline] = useState<MilestoneTimelineItem[]>(mockMilestoneTimeline);
 
   // Ray-Casting Point-in-Polygon Check Simulator
-  const handleTestPoint = (e) => {
-    e.preventDefault();
+  const handleTestPoint = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     const lat = parseFloat(testLat);
     const lng = parseFloat(testLng);
 
-    // Bounding box approximation for demo
-    const inside = lat >= 7.485 && lat <= 7.489 && lng >= 7.362 && lng <= 80.368;
+    if (isNaN(lat) || isNaN(lng)) return;
+
+    // Bounding box approximation for local demo simulation
+    const inside = lat >= 7.485 && lat <= 7.489 && lng >= 80.362 && lng <= 80.368;
 
     setRayCastResult({
       lat,
       lng,
       isInside: inside,
       polygonId: selectedProject.polygonId,
-      distanceFromCentroid: inside ? '42 meters' : '3.8 km outside boundary',
+      distanceFromCentroid: inside ? '42 meters from centroid' : '3.8 km outside boundary perimeter',
+    });
+  };
+
+  const handlePointSelectFromMap = (lat: number, lng: number) => {
+    setTestLat(lat.toFixed(6));
+    setTestLng(lng.toFixed(6));
+    const inside = lat >= 7.485 && lat <= 7.489 && lng >= 80.362 && lng <= 80.368;
+    setRayCastResult({
+      lat,
+      lng,
+      isInside: inside,
+      polygonId: selectedProject.polygonId,
+      distanceFromCentroid: inside ? 'Inside parcel boundary' : 'Outside parcel boundary',
     });
   };
 
   // Submit Milestone Report
-  const handleSubmitReport = async (e) => {
+  const handleSubmitReport = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
     setTimeout(() => {
-      const mockResult = {
+      const mockResult: MilestoneReportResult = {
         reportId: `rep-m4-${Date.now().toString().slice(-4)}`,
         milestone: milestoneName,
         submittedAt: new Date().toISOString(),
@@ -142,21 +164,24 @@ export default function CompanyPage() {
       {/* ─── TAB 1: Geofence Polygon Visualizer ────────────────────────── */}
       {activeTab === 'geofence' && (
         <div className="two-col-layout">
-          {/* Boundary Card */}
+          {/* Boundary Card with Interactive Leaflet Map */}
           <div className="glass-card">
             <div className="card-header">
-              <h3>Registered Land Parcel Boundary</h3>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Registered Land Parcel Boundary</h3>
+                <p className="text-xs text-slate-400">Interactive OpenStreetMap + Leaflet GIS Boundary Layer</p>
+              </div>
               <span className="badge badge-emerald">{selectedProject.areaHectares} Hectares</span>
             </div>
 
-            <div className="project-select-row" style={{ marginBottom: '1rem' }}>
-              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Select Asset:</label>
+            <div className="project-select-row mb-4">
+              <label className="text-xs text-slate-400 block mb-1">Select Asset:</label>
               <select
                 className="form-input"
                 value={selectedProject.id}
                 onChange={(e) => {
                   const p = mockGeofencedProjects.find((x) => x.id === e.target.value);
-                  setSelectedProject(p);
+                  if (p) setSelectedProject(p);
                 }}
               >
                 {mockGeofencedProjects.map((p) => (
@@ -165,6 +190,24 @@ export default function CompanyPage() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Interactive Leaflet Map Component */}
+            <div className="mb-4">
+              <GeofenceMap
+                polygonCoordinates={selectedProject.polygonCoordinates}
+                centroid={selectedProject.centroid}
+                testCoordinate={
+                  rayCastResult
+                    ? {
+                        lat: rayCastResult.lat,
+                        lng: rayCastResult.lng,
+                        isInside: rayCastResult.isInside,
+                      }
+                    : undefined
+                }
+                onPointSelect={handlePointSelectFromMap}
+              />
             </div>
 
             <div className="meta-row">
@@ -181,10 +224,10 @@ export default function CompanyPage() {
             </div>
 
             {/* Coordinates table */}
-            <h4 style={{ marginTop: '1.25rem', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+            <h4 className="mt-4 mb-2 text-sm font-semibold text-slate-300">
               GeoJSON Polygon Ring:
             </h4>
-            <div className="table-responsive">
+            <div className="table-responsive max-h-48 overflow-y-auto">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -209,10 +252,12 @@ export default function CompanyPage() {
           {/* Ray-Casting Engine Test Card */}
           <div className="glass-card">
             <div className="card-header">
-              <h3>Point-in-Polygon Ray Casting Tester</h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                Target: <code>GET /api/geofence</code> — Ray-Casting algorithm guarantees telemetry validity
-              </p>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Point-in-Polygon Ray Casting Tester</h3>
+                <p className="text-xs text-slate-400">
+                  Target: <code>GET /api/geofence</code> — Ray-Casting algorithm guarantees telemetry validity
+                </p>
+              </div>
             </div>
 
             <form onSubmit={handleTestPoint} className="form-stack">
@@ -238,11 +283,10 @@ export default function CompanyPage() {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+              <div className="flex gap-2 mb-4">
                 <button
                   type="button"
-                  className="btn btn-ghost"
-                  style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
+                  className="btn btn-ghost text-xs px-2 py-1"
                   onClick={() => {
                     setTestLat('7.4867');
                     setTestLng('80.3651');
@@ -252,8 +296,7 @@ export default function CompanyPage() {
                 </button>
                 <button
                   type="button"
-                  className="btn btn-ghost"
-                  style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
+                  className="btn btn-ghost text-xs px-2 py-1"
                   onClick={() => {
                     setTestLat('6.9271');
                     setTestLng('79.8612');
@@ -263,22 +306,21 @@ export default function CompanyPage() {
                 </button>
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
+              <button type="submit" className="btn btn-primary w-full">
                 Execute Point-in-Polygon Ray Cast
               </button>
             </form>
 
             {rayCastResult && (
               <div
-                className={`alert-box alert-${rayCastResult.isInside ? 'emerald' : 'rose'}`}
-                style={{ marginTop: '1.5rem' }}
+                className={`alert-box alert-${rayCastResult.isInside ? 'emerald' : 'rose'} mt-6`}
               >
-                <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                <div className="font-bold text-sm">
                   {rayCastResult.isInside
                     ? '✅ Coordinates Confirmed INSIDE Parcel Polygon'
                     : '❌ Coordinates OUTSIDE Parcel Boundary (Spoofing Flag)'}
                 </div>
-                <div style={{ fontSize: '0.82rem', marginTop: '0.25rem' }}>
+                <div className="text-xs mt-1">
                   Distance from centroid: {rayCastResult.distanceFromCentroid}
                 </div>
               </div>
@@ -292,10 +334,12 @@ export default function CompanyPage() {
         <div className="two-col-layout">
           <div className="glass-card">
             <div className="card-header">
-              <h3>Submit Milestone Evidence</h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                Target: <code>POST /api/reports/submit</code>
-              </p>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Submit Milestone Evidence</h3>
+                <p className="text-xs text-slate-400">
+                  Target: <code>POST /api/reports/submit</code>
+                </p>
+              </div>
             </div>
 
             <form onSubmit={handleSubmitReport} className="form-stack">
@@ -346,8 +390,7 @@ export default function CompanyPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="btn btn-primary"
-                style={{ width: '100%', marginTop: '0.5rem' }}
+                className="btn btn-primary w-full mt-2"
               >
                 {submitting ? 'Running Anti-Spoof & dHash Pipeline...' : 'Submit Evidence & Unlock Tranche'}
               </button>
@@ -357,7 +400,7 @@ export default function CompanyPage() {
           {/* Validation Result */}
           <div className="glass-card">
             <div className="card-header">
-              <h3>Proof-of-Reality Validation Result</h3>
+              <h3 className="text-lg font-semibold text-white">Proof-of-Reality Validation Result</h3>
               {reportResult && <span className="badge badge-emerald">Verified & Approved</span>}
             </div>
 
@@ -373,7 +416,7 @@ export default function CompanyPage() {
                 </div>
                 <div className="meta-row">
                   <span className="meta-key">Device Telemetry:</span>
-                  <span className="meta-val" style={{ fontSize: '0.8rem' }}>
+                  <span className="meta-val text-xs">
                     {reportResult.exifValidation.deviceModel}
                   </span>
                 </div>
@@ -384,7 +427,7 @@ export default function CompanyPage() {
                   </span>
                 </div>
 
-                <div className="alert-box alert-cyan" style={{ marginTop: '1.25rem' }}>
+                <div className="alert-box alert-cyan mt-5">
                   <strong>Cross-Module Trigger:</strong> {reportResult.escrowMessage}
                 </div>
               </div>
@@ -401,7 +444,7 @@ export default function CompanyPage() {
       {activeTab === 'timeline' && (
         <div className="glass-card">
           <div className="card-header">
-            <h3>On-Chain Proof-of-Reality Timeline</h3>
+            <h3 className="text-lg font-semibold text-white">On-Chain Proof-of-Reality Timeline</h3>
             <span className="badge badge-cyan">{selectedProject.name}</span>
           </div>
 
@@ -415,11 +458,11 @@ export default function CompanyPage() {
 
                 <div className="timeline-card">
                   <div className="timeline-card-header">
-                    <h4>{item.title}</h4>
+                    <h4 className="text-base font-semibold text-white">{item.title}</h4>
                     <span className="badge badge-emerald">Verified</span>
                   </div>
 
-                  <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '0.4rem 0' }}>
+                  <p className="text-xs text-slate-400 my-1">
                     Completed on {new Date(item.completedAt).toLocaleDateString()}
                   </p>
 
@@ -431,7 +474,7 @@ export default function CompanyPage() {
                     </span>
                   </div>
 
-                  <div style={{ marginTop: '0.5rem', fontSize: '0.78rem' }}>
+                  <div className="mt-2 text-xs">
                     <a
                       href={`https://testnet.xrpl.org/transactions/${item.txHash}`}
                       target="_blank"

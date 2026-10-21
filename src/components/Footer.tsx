@@ -1,4 +1,4 @@
-/* ─── PlanTrust Global Footer ─────────────────────────────────────────────
+/* ─── PlanTrust Global Footer (TypeScript + Tailwind) ─────────────────────
  * Shared footer highlighting team ownership, architecture, and developer resources.
  * ──────────────────────────────────────────────────────────────────────── */
 

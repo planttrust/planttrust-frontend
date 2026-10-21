@@ -1,6 +1,6 @@
 'use client';
 
-/* ─── PlanTrust Global Navbar ─────────────────────────────────────────────
+/* ─── PlanTrust Global Navbar (TypeScript + Tailwind) ─────────────────────
  * Shared navigation bar across all 5 modules with:
  * - Live Backend Health Status indicator (checks unified backend on port 3000)
  * - Module owner badges and route navigation
@@ -11,11 +11,12 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { api, authStorage } from '@/lib/api';
+import type { User, UserRole } from '@/types';
 
 export default function Navbar() {
   const pathname = usePathname();
-  const [backendStatus, setBackendStatus] = useState('checking'); // 'online' | 'offline' | 'checking'
-  const [user, setUser] = useState(() => (typeof window !== 'undefined' ? authStorage.getUser() : null));
+  const [backendStatus, setBackendStatus] = useState<'online' | 'offline' | 'mock' | 'checking'>('checking');
+  const [user, setUser] = useState<User | null>(() => (typeof window !== 'undefined' ? authStorage.getUser() : null));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -50,8 +51,8 @@ export default function Navbar() {
     setUser(null);
   };
 
-  const setDemoRole = (role, name, email) => {
-    const demoUser = { id: `demo-${role}-${Date.now().toString().slice(-4)}`, name, email, role };
+  const setDemoRole = (role: UserRole, name: string, email: string) => {
+    const demoUser: User = { id: `demo-${role}-${Date.now().toString().slice(-4)}`, name, email, role };
     authStorage.setToken(`demo-jwt-token-${role}`);
     authStorage.setUser(demoUser);
     setUser(demoUser);

@@ -1,6 +1,6 @@
 'use client';
 
-/* ─── Module 3: MCP-Driven Explainable AI & Chatbot ───────────────────────
+/* ─── Module 3: MCP-Driven Explainable AI & Chatbot (TypeScript) ──────────
  * Owner: Imesha Ariyawansha
  * Scope: Frontend • Backend • Database • AI (Scam Typologies + CBSL Rules) • Blockchain (Audit Proofs)
  * Base Endpoints: /api/mcp, /api/chatbot, /api/scam
@@ -10,12 +10,13 @@ import { useState } from 'react';
 import ModuleContractBanner from '@/components/ModuleContractBanner';
 import { api } from '@/lib/api';
 import { mockChatbotHistory, mockScamAuditLog, mockScamTypologies } from '@/lib/mockData';
+import type { ChatMessage, ScamCheckResult, ScamTypology } from '@/types';
 
 export default function ChatbotPage() {
-  const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'scam' | 'audit'
+  const [activeTab, setActiveTab] = useState<'chat' | 'scam' | 'audit'>('chat');
 
   // Chatbot State
-  const [messages, setMessages] = useState(mockChatbotHistory);
+  const [messages, setMessages] = useState<ChatMessage[]>(mockChatbotHistory);
   const [inputQuery, setInputQuery] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
 
@@ -23,14 +24,14 @@ export default function ChatbotPage() {
   const [pitchText, setPitchText] = useState(
     'Guaranteed 35% monthly returns! No risk agricultural investment. Transfer funds via USDT directly to our telegram representative.'
   );
-  const [scamResult, setScamResult] = useState(null);
+  const [scamResult, setScamResult] = useState<ScamCheckResult | null>(null);
   const [scamLoading, setScamLoading] = useState(false);
 
-  const handleSendMessage = async (queryText) => {
+  const handleSendMessage = async (queryText?: string) => {
     const textToSend = queryText || inputQuery;
     if (!textToSend.trim()) return;
 
-    const userMsg = {
+    const userMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
       sender: 'user',
       text: textToSend,
@@ -47,7 +48,7 @@ export default function ChatbotPage() {
         sessionId: 'sess-curr-1',
       });
 
-      const botMsg = {
+      const botMsg: ChatMessage = {
         id: `msg-bot-${Date.now()}`,
         sender: 'assistant',
         text: res.response || 'The requested investment record has been verified against CBSL guidelines and XRPL on-chain escrow.',
@@ -62,7 +63,6 @@ export default function ChatbotPage() {
       };
       setMessages((prev) => [...prev, botMsg]);
     } catch {
-      // Fallback message
       setMessages((prev) => [
         ...prev,
         {
@@ -78,7 +78,7 @@ export default function ChatbotPage() {
     }
   };
 
-  const handleRunScamCheck = (e) => {
+  const handleRunScamCheck = (e: React.FormEvent) => {
     e.preventDefault();
     setScamLoading(true);
 
@@ -87,11 +87,11 @@ export default function ChatbotPage() {
       const hasGuaranteed = lower.includes('guaranteed') || lower.includes('35%') || lower.includes('no risk');
       const hasCryptoUnregulated = lower.includes('usdt') || lower.includes('telegram');
 
-      const matched = [];
-      if (hasGuaranteed) {
+      const matched: ScamTypology[] = [];
+      if (hasGuaranteed && mockScamTypologies[0]) {
         matched.push(mockScamTypologies[0]);
       }
-      if (hasCryptoUnregulated) {
+      if (hasCryptoUnregulated && mockScamTypologies[1]) {
         matched.push(mockScamTypologies[1]);
       }
 
@@ -324,7 +324,7 @@ export default function ChatbotPage() {
                 <label>Investment Pitch, Website Text, or Marketing Material</label>
                 <textarea
                   className="form-input"
-                  rows="6"
+                  rows={6}
                   value={pitchText}
                   onChange={(e) => setPitchText(e.target.value)}
                   required
@@ -455,12 +455,12 @@ export default function ChatbotPage() {
               </thead>
               <tbody>
                 {mockScamAuditLog.map((item) => (
-                  <tr key={item.id}>
-                    <td style={{ fontSize: '0.8rem' }}>{new Date(item.timestamp).toLocaleString()}</td>
-                    <td><code>{item.id}</code></td>
+                  <tr key={item.id || item.flagId}>
+                    <td style={{ fontSize: '0.8rem' }}>{new Date(item.timestamp || item.createdAt || '').toLocaleString()}</td>
+                    <td><code>{item.id || item.flagId}</code></td>
                     <td>{item.projectTitle}</td>
                     <td>
-                      <span className={`badge ${item.riskScore > 60 ? 'badge-rose' : 'badge-emerald'}`}>
+                      <span className={`badge ${(item.riskScore || 0) > 60 ? 'badge-rose' : 'badge-emerald'}`}>
                         {item.riskScore} / 100
                       </span>
                     </td>
