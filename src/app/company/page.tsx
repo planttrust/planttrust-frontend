@@ -463,7 +463,7 @@ export default function CompanyPage() {
                   </div>
 
                   <p className="text-xs text-slate-400 my-1">
-                    Completed on {new Date(item.completedAt).toLocaleDateString()}
+                    Completed on {item.completedAt ? new Date(item.completedAt).toLocaleDateString() : 'Recently'}
                   </p>
 
                   <div className="timeline-badges-row">
@@ -475,14 +475,18 @@ export default function CompanyPage() {
                   </div>
 
                   <div className="mt-2 text-xs">
-                    <a
-                      href={`https://testnet.xrpl.org/transactions/${item.txHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="link-btn"
-                    >
-                      View XRPL Ledger Transaction ({item.txHash.slice(0, 16)}...) ↗
-                    </a>
+                    {item.txHash ? (
+                      <a
+                        href={`https://testnet.xrpl.org/transactions/${item.txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="link-btn"
+                      >
+                        View XRPL Ledger Transaction ({item.txHash.slice(0, 16)}...) ↗
+                      </a>
+                    ) : (
+                      <span className="text-slate-500">Pending Anchor</span>
+                    )}
                   </div>
                 </div>
               </div>
