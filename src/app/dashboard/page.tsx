@@ -241,13 +241,13 @@ export default function DashboardPage() {
                   <div className="factor-header flex justify-between text-xs mb-1">
                     <span className="text-slate-300">Module 1: Corporate KYC & Deed Registry</span>
                     <span className="text-emerald font-bold">
-                      {trustData.components.kycVerification} / 25
+                      {trustData.components.kycVerification ?? 25} / 25
                     </span>
                   </div>
                   <div className="progress-track">
                     <div
                       className="progress-fill"
-                      style={{ width: `${(trustData.components.kycVerification / 25) * 100}%` }}
+                      style={{ width: `${((trustData.components.kycVerification ?? 25) / 25) * 100}%` }}
                     ></div>
                   </div>
                 </div>
@@ -256,13 +256,13 @@ export default function DashboardPage() {
                   <div className="factor-header flex justify-between text-xs mb-1">
                     <span className="text-slate-300">Module 2: Escrow Capital Protection & Lock</span>
                     <span className="text-emerald font-bold">
-                      {trustData.components.escrowDiscipline} / 30
+                      {trustData.components.escrowDiscipline ?? 30} / 30
                     </span>
                   </div>
                   <div className="progress-track">
                     <div
                       className="progress-fill"
-                      style={{ width: `${(trustData.components.escrowDiscipline / 30) * 100}%` }}
+                      style={{ width: `${((trustData.components.escrowDiscipline ?? 30) / 30) * 100}%` }}
                     ></div>
                   </div>
                 </div>
@@ -283,13 +283,13 @@ export default function DashboardPage() {
                   <div className="factor-header flex justify-between text-xs mb-1">
                     <span className="text-slate-300">Module 4: Milestone Geofence Proof-of-Reality</span>
                     <span className="text-emerald font-bold">
-                      {trustData.components.milestoneReality} / 40
+                      {trustData.components.milestoneReality ?? 38} / 40
                     </span>
                   </div>
                   <div className="progress-track">
                     <div
                       className="progress-fill"
-                      style={{ width: `${(trustData.components.milestoneReality / 40) * 100}%` }}
+                      style={{ width: `${((trustData.components.milestoneReality ?? 38) / 40) * 100}%` }}
                     ></div>
                   </div>
                 </div>
