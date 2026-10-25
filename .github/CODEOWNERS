@@ -1,4 +1,4 @@
-﻿# CODEOWNERS — PlanTrust Frontend
+# CODEOWNERS — PlanTrust Frontend
 # Automatically requests the right reviewer when a PR touches a module's pages.
 
 # Each member owns their module's pages
@@ -11,8 +11,8 @@
 # Shared components, lib, layout, config
 /src/components/    @planttrust/planttrust-devs
 /src/lib/           @planttrust/planttrust-devs
-/src/app/layout.js  @planttrust/planttrust-devs
-/src/app/page.js    @planttrust/planttrust-devs
+/src/app/layout.tsx @planttrust/planttrust-devs
+/src/app/page.tsx   @planttrust/planttrust-devs
 
 # Repo-level config
 /.github/           @planttrust/planttrust-devs
