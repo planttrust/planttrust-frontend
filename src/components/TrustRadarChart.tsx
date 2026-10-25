@@ -50,16 +50,36 @@ export default function TrustRadarChart({
     );
   }
 
-  const kyc = components?.kycVerification ?? 25;
-  const escrow = components?.escrowDiscipline ?? 30;
-  const milestones = components?.milestoneReality ?? 38;
-  const compliance = components?.complianceScore ?? 20;
+  const kyc = typeof components?.kycVerification === 'number' ? components.kycVerification : 0;
+  const escrow = typeof components?.escrowDiscipline === 'number' ? components.escrowDiscipline : 0;
+  const milestones = typeof components?.milestoneReality === 'number' ? components.milestoneReality : 0;
+  const compliance = typeof components?.complianceScore === 'number' ? components.complianceScore : 0;
 
   const chartData = [
-    { subject: 'M1: KYC Registry', score: (kyc / 25) * 100, fullMark: 100, rawScore: `${kyc}/25` },
-    { subject: 'M2: Escrow Lock', score: (escrow / 30) * 100, fullMark: 100, rawScore: `${escrow}/30` },
-    { subject: 'M3: Scam Absence', score: (compliance / 20) * 100, fullMark: 100, rawScore: `${compliance}/20` },
-    { subject: 'M4: Proof-of-Reality', score: (milestones / 40) * 100, fullMark: 100, rawScore: `${milestones}/40` },
+    {
+      subject: 'M1: KYC Registry',
+      score: (kyc / 25) * 100,
+      fullMark: 100,
+      rawScore: typeof components?.kycVerification === 'number' ? `${kyc}/25` : 'N/A',
+    },
+    {
+      subject: 'M2: Escrow Lock',
+      score: (escrow / 30) * 100,
+      fullMark: 100,
+      rawScore: typeof components?.escrowDiscipline === 'number' ? `${escrow}/30` : 'N/A',
+    },
+    {
+      subject: 'M3: Scam Absence',
+      score: (compliance / 20) * 100,
+      fullMark: 100,
+      rawScore: typeof components?.complianceScore === 'number' ? `${compliance}/20` : 'N/A',
+    },
+    {
+      subject: 'M4: Proof-of-Reality',
+      score: (milestones / 40) * 100,
+      fullMark: 100,
+      rawScore: typeof components?.milestoneReality === 'number' ? `${milestones}/40` : 'N/A',
+    },
   ];
 
   return (
