@@ -240,14 +240,20 @@ export default function DashboardPage() {
                 <div className="factor-item">
                   <div className="factor-header flex justify-between text-xs mb-1">
                     <span className="text-slate-300">Module 1: Corporate KYC & Deed Registry</span>
-                    <span className="text-emerald font-bold">
-                      {trustData.components.kycVerification ?? 25} / 25
+                    <span className={typeof trustData.components.kycVerification === 'number' ? "text-emerald font-bold" : "text-slate-400 font-medium"}>
+                      {typeof trustData.components.kycVerification === 'number'
+                        ? `${trustData.components.kycVerification} / 25`
+                        : 'N/A'}
                     </span>
                   </div>
                   <div className="progress-track">
                     <div
                       className="progress-fill"
-                      style={{ width: `${((trustData.components.kycVerification ?? 25) / 25) * 100}%` }}
+                      style={{
+                        width: `${typeof trustData.components.kycVerification === 'number'
+                          ? ((trustData.components.kycVerification / 25) * 100)
+                          : 0}%`
+                      }}
                     ></div>
                   </div>
                 </div>
@@ -255,14 +261,20 @@ export default function DashboardPage() {
                 <div className="factor-item">
                   <div className="factor-header flex justify-between text-xs mb-1">
                     <span className="text-slate-300">Module 2: Escrow Capital Protection & Lock</span>
-                    <span className="text-emerald font-bold">
-                      {trustData.components.escrowDiscipline ?? 30} / 30
+                    <span className={typeof trustData.components.escrowDiscipline === 'number' ? "text-emerald font-bold" : "text-slate-400 font-medium"}>
+                      {typeof trustData.components.escrowDiscipline === 'number'
+                        ? `${trustData.components.escrowDiscipline} / 30`
+                        : 'N/A'}
                     </span>
                   </div>
                   <div className="progress-track">
                     <div
                       className="progress-fill"
-                      style={{ width: `${((trustData.components.escrowDiscipline ?? 30) / 30) * 100}%` }}
+                      style={{
+                        width: `${typeof trustData.components.escrowDiscipline === 'number'
+                          ? ((trustData.components.escrowDiscipline / 30) * 100)
+                          : 0}%`
+                      }}
                     ></div>
                   </div>
                 </div>
@@ -282,14 +294,20 @@ export default function DashboardPage() {
                 <div className="factor-item">
                   <div className="factor-header flex justify-between text-xs mb-1">
                     <span className="text-slate-300">Module 4: Milestone Geofence Proof-of-Reality</span>
-                    <span className="text-emerald font-bold">
-                      {trustData.components.milestoneReality ?? 38} / 40
+                    <span className={typeof trustData.components.milestoneReality === 'number' ? "text-emerald font-bold" : "text-slate-400 font-medium"}>
+                      {typeof trustData.components.milestoneReality === 'number'
+                        ? `${trustData.components.milestoneReality} / 40`
+                        : 'N/A'}
                     </span>
                   </div>
                   <div className="progress-track">
                     <div
                       className="progress-fill"
-                      style={{ width: `${((trustData.components.milestoneReality ?? 38) / 40) * 100}%` }}
+                      style={{
+                        width: `${typeof trustData.components.milestoneReality === 'number'
+                          ? ((trustData.components.milestoneReality / 40) * 100)
+                          : 0}%`
+                      }}
                     ></div>
                   </div>
                 </div>
