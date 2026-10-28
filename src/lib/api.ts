@@ -1,9 +1,8 @@
-/* ─── PlanTrust TypeScript API Client ─────────────────────────────────────
- * Central typed client for communicating with the unified PlanTrust backend (:3000).
- * Supports automatic token injection, multipart uploads, and mock fallbacks.
+/* ─── PlanTrust TypeScript API Client & OOP Architecture Bridge ─────────────
+ * Central typed client adhering to Object-Oriented Programming (OOP) and SOLID
+ * design principles. Bridges UI components to Domain Entities and OOP Services.
  * ──────────────────────────────────────────────────────────────────────── */
 
-import * as mocks from './mockData';
 import type {
   User,
   AuthResponse,
@@ -21,20 +20,32 @@ import type {
   HealthResponse,
 } from '@/types';
 
+import { BaseApiClient, RequestOptions } from '@/services/BaseApiClient';
+import authService, { AuthService } from '@/services/AuthService';
+import marketplaceService, { MarketplaceService } from '@/services/MarketplaceService';
+import chatbotService, { ChatbotService } from '@/services/ChatbotService';
+import geofenceService, { GeofenceService } from '@/services/GeofenceService';
+import auditService, { AuditService } from '@/services/AuditService';
+import documentService, { DocumentService } from '@/services/DocumentService';
+
+// Re-export OOP Services and Domain Entities
+export * from '@/domain';
+export * from '@/services';
+export {
+  authService,
+  marketplaceService,
+  chatbotService,
+  geofenceService,
+  auditService,
+  documentService,
+};
+
 export const API_BASE_URL: string =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
-const MODULE_BASE_URLS: Record<string, string> = {
-  module1: process.env.NEXT_PUBLIC_MODULE1_URL || API_BASE_URL,
-  module2: process.env.NEXT_PUBLIC_MODULE2_URL || API_BASE_URL,
-  module3: process.env.NEXT_PUBLIC_MODULE3_URL || API_BASE_URL,
-  module4: process.env.NEXT_PUBLIC_MODULE4_URL || API_BASE_URL,
-  module5: process.env.NEXT_PUBLIC_MODULE5_URL || API_BASE_URL,
-};
+const apiClient = new BaseApiClient(API_BASE_URL);
 
-const IS_MOCK_ENABLED: boolean = process.env.NEXT_PUBLIC_ENABLE_MOCKS === 'true';
-
-// ─── Token & Session Management ─────────────────────────────────────────
+// ─── Token & Session Storage (OOP Wrapper) ──────────────────────────────
 
 export const authStorage = {
   getToken: (): string | null => {
@@ -60,393 +71,153 @@ export const authStorage = {
     localStorage.setItem('planttrust_user', JSON.stringify(user));
   },
   clear: (): void => {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem('planttrust_token');
-    localStorage.removeItem('token');
-    localStorage.removeItem('planttrust_user');
+    authService.clearSession();
   },
   isAuthenticated: (): boolean => {
-    return Boolean(authStorage.getToken());
+    return authService.isAuthenticated();
   },
 };
 
-// ─── Core HTTP Request Utility ──────────────────────────────────────────
-
-interface RequestOptions extends RequestInit {
-  baseUrl?: string;
-  isFormData?: boolean;
-}
-
-async function request<T = any>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-  const { baseUrl = API_BASE_URL, isFormData = false, ...fetchOptions } = options;
-  const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-
-  const headers: Record<string, string> = { ...((fetchOptions.headers as Record<string, string>) || {}) };
-
-  if (!isFormData && !headers['Content-Type']) {
-    headers['Content-Type'] = 'application/json';
-  }
-
-  const token = authStorage.getToken();
-  if (token && !headers['Authorization']) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  try {
-    const response = await fetch(url, {
-      ...fetchOptions,
-      headers,
-    });
-
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      const errorMsg = data.error || data.message || `HTTP ${response.status}: ${response.statusText}`;
-      const err = new Error(errorMsg) as any;
-      err.status = response.status;
-      err.data = data;
-      throw err;
-    }
-
-    return data as T;
-  } catch (error: any) {
-    if (IS_MOCK_ENABLED || error.name === 'TypeError' || error.message?.includes('fetch')) {
-      const mockResult = getMockFallback(endpoint, fetchOptions.method || 'GET', fetchOptions.body);
-      if (mockResult !== null) {
-        return mockResult as T;
-      }
-    }
-    throw error;
-  }
-}
-
-// ─── Mock Fallback Dispatcher ───────────────────────────────────────────
-
-function getMockFallback(endpoint: string, method: string, _body?: any): any {
-  if (endpoint.includes('/health')) {
-    return { status: 'mock_online', service: 'planttrust-frontend-mock', timestamp: new Date().toISOString() };
-  }
-  if (endpoint.includes('/api/auth/login') && method === 'POST') {
-    return { message: 'Logged in (mock mode)', token: 'mock-jwt-token-investor', user: mocks.mockUsers[0] };
-  }
-  if (endpoint.includes('/api/auth/register') && method === 'POST') {
-    return { message: 'Registered (mock mode)', token: 'mock-jwt-token-investor', user: mocks.mockUsers[0] };
-  }
-  if (endpoint.includes('/api/certificates/') && endpoint.includes('/verify')) {
-    const certId = endpoint.split('/')[3];
-    return mocks.mockCertificates.find((c) => c.certificateId === certId) || mocks.mockCertificates[0];
-  }
-  if (endpoint.includes('/api/certificates')) {
-    return { certificates: mocks.mockCertificates };
-  }
-  if (endpoint.includes('/api/listings')) {
-    return { listings: mocks.mockListings, total: mocks.mockListings.length, page: 1, totalPages: 1 };
-  }
-  if (endpoint.includes('/api/escrow/fund') && method === 'POST') {
-    return {
-      escrowId: `esc-${Date.now()}`,
-      investorId: mocks.mockUsers[0].id,
-      projectId: 'proj-kurunegala-agri',
-      amount: 5000,
-      state: 'FUNDED',
-      anchorId: `anc-m2-${Date.now()}`,
-      nftTokenId: '00080000MOCKNFTTOKENID92819481928491024A9D3F',
-      createdAt: new Date().toISOString(),
-    };
-  }
-  if (endpoint.includes('/api/escrow/') && endpoint.includes('/history')) {
-    return mocks.mockEscrowHistory[0];
-  }
-  if (endpoint.includes('/api/transfers/p2p') && method === 'POST') {
-    return {
-      transferId: `trf-${Date.now()}`,
-      escrowId: 'esc-9012-funded',
-      sellerId: mocks.mockUsers[0].id,
-      buyerId: 'u-1002-buyer',
-      transferAmount: 2500,
-      sellerNftBurned: true,
-      buyerNftMinted: '00080000MOCKBUYERNFTID',
-      anchorId: `anc-m2-trf-${Date.now()}`,
-      transferredAt: new Date().toISOString(),
-    };
-  }
-  if (endpoint.includes('/api/mcp/query') && method === 'POST') {
-    return {
-      sessionId: `sess-${Date.now()}`,
-      response: 'The project is verified and backed by XRPL on-chain escrow.',
-      sources: mocks.mockChatbotHistory[1]?.sources,
-      reasoning: mocks.mockChatbotHistory[1]?.reasoning,
-      confidence: 0.95,
-    };
-  }
-  if (endpoint.includes('/api/chatbot/session') && method === 'POST') {
-    return { sessionId: `sess-${Date.now()}`, createdAt: new Date().toISOString() };
-  }
-  if (endpoint.includes('/api/chatbot/session/')) {
-    return { sessionId: 'sess-default', messages: mocks.mockChatbotHistory };
-  }
-  if (endpoint.includes('/api/scam/check') && method === 'POST') {
-    return {
-      projectId: 'proj-kurunegala-agri',
-      flags: [],
-      overallRisk: 'clear',
-      reasoning: 'Velocity within normal bounds. CBSL capital adequacy met.',
-    };
-  }
-  if (endpoint.includes('/api/scam/audit-log')) {
-    return { flags: mocks.mockScamAuditLog, total: mocks.mockScamAuditLog.length, page: 1 };
-  }
-  if (endpoint.includes('/api/projects/') && endpoint.includes('/timeline')) {
-    return { projectId: 'proj-kurunegala-agri', projectName: 'Kurunegala Organic Vanilla', milestones: mocks.mockMilestoneTimeline };
-  }
-  if (endpoint.includes('/api/reports/submit') && method === 'POST') {
-    return {
-      reportId: `rep-${Date.now()}`,
-      projectId: 'proj-kurunegala-agri',
-      milestone: 'planting_complete',
-      status: 'pending_validation',
-      evidenceCount: 3,
-      submittedAt: new Date().toISOString(),
-    };
-  }
-  if (endpoint.includes('/api/audit/anchor') && method === 'POST') {
-    return {
-      anchorId: `anc-${Date.now()}`,
-      batchId: `batch-${Date.now()}`,
-      status: 'queued',
-      txHash: '4A9D3F82E5C9A17482D42079148F2A8CD996B34A9988D4D6B9C23145E7A29F31',
-      merkleProof: ['0x12a...', '0x34b...'],
-    };
-  }
-  if (endpoint.includes('/api/audit/verify/') || endpoint.includes('/api/verify/')) {
-    return {
-      anchorId: endpoint.split('/').pop() || 'anc-sample',
-      dataHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-      merkleRoot: '7a2b9184c910482b91a429e849201a84928194d8129481928491025f1a8c92b4',
-      merkleProof: ['hash_left_01', 'hash_right_02'],
-      txHash: '4A9D3F82E5C9A17482D42079148F2A8CD996B34A9988D4D6B9C23145E7A29F31',
-      verified: true,
-      explorerUrl: 'https://testnet.xrpl.org/transactions/4A9D3F82E5C9A17482D42079148F2A8CD996B34A9988D4D6B9C23145E7A29F31',
-    };
-  }
-  if (endpoint.includes('/api/trust-index')) {
-    return mocks.mockTrustIndex;
-  }
-  if (endpoint.includes('/api/audit')) {
-    return { auditTrail: mocks.mockAuditTrail };
-  }
-  return null;
-}
-
-// ─── Module-Specific Typed Namespaces ───────────────────────────────────
+// ─── Unified API Facade ─────────────────────────────────────────────────
 
 export const api = {
-  // Base HTTP Verbs
-  get: <T = any>(endpoint: string, options?: RequestOptions) => request<T>(endpoint, { ...options, method: 'GET' }),
+  // Base HTTP Verbs delegated to BaseApiClient
+  get: <T = any>(endpoint: string, options?: RequestOptions) =>
+    apiClient.request<T>(endpoint, { ...options, method: 'GET' }),
   post: <T = any>(endpoint: string, body?: any, options?: RequestOptions) =>
-    request<T>(endpoint, { ...options, method: 'POST', body: JSON.stringify(body) }),
+    apiClient.request<T>(endpoint, { ...options, method: 'POST', body: JSON.stringify(body) }),
   put: <T = any>(endpoint: string, body?: any, options?: RequestOptions) =>
-    request<T>(endpoint, { ...options, method: 'PUT', body: JSON.stringify(body) }),
+    apiClient.request<T>(endpoint, { ...options, method: 'PUT', body: JSON.stringify(body) }),
   delete: <T = any>(endpoint: string, options?: RequestOptions) =>
-    request<T>(endpoint, { ...options, method: 'DELETE' }),
+    apiClient.request<T>(endpoint, { ...options, method: 'DELETE' }),
   upload: <T = any>(endpoint: string, formData: FormData, options?: RequestOptions) =>
-    request<T>(endpoint, { ...options, method: 'POST', body: formData, isFormData: true }),
+    apiClient.request<T>(endpoint, { ...options, method: 'POST', body: formData, isFormData: true }),
 
   // Health
-  health: () => request<HealthResponse>('/health'),
+  health: () => apiClient.request<HealthResponse>('/health'),
 
-  // Module 1 (Nimsara Karunarathna)
+  // Module 1 (Nimsara Karunarathna) - Delegated to AuthService & DocumentService
   auth: {
-    status: () => request<{ message: string }>('/api/auth', { baseUrl: MODULE_BASE_URLS.module1 }),
-    login: async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
-      const res = await request<AuthResponse>('/api/auth/login', {
-        baseUrl: MODULE_BASE_URLS.module1,
-        method: 'POST',
-        body: JSON.stringify(credentials),
-      });
-      if (res?.token) {
-        authStorage.setToken(res.token);
-        if (res.user) authStorage.setUser(res.user);
-      }
-      return res;
-    },
-    register: async (userData: { email: string; password: string; name: string; role?: string; phone?: string }): Promise<AuthResponse> => {
-      const res = await request<AuthResponse>('/api/auth/register', {
-        baseUrl: MODULE_BASE_URLS.module1,
-        method: 'POST',
-        body: JSON.stringify(userData),
-      });
-      if (res?.token) {
-        authStorage.setToken(res.token);
-        if (res.user) authStorage.setUser(res.user);
-      }
-      return res;
-    },
-    logout: () => {
-      authStorage.clear();
-    },
+    status: () => authService.getStatus(),
+    login: (credentials: { email: string; password: string }) => authService.login(credentials),
+    register: (userData: { email: string; password: string; name: string; role?: string; phone?: string }) =>
+      authService.register(userData),
+    logout: () => authService.logout(),
   },
   documents: {
-    status: () => request<{ message: string }>('/api/documents', { baseUrl: MODULE_BASE_URLS.module1 }),
-    upload: (formData: FormData) =>
-      request('/api/documents/upload', {
-        baseUrl: MODULE_BASE_URLS.module1,
-        method: 'POST',
-        body: formData,
-        isFormData: true,
-      }),
+    status: () => documentService.getDocumentsStatus(),
+    upload: (formData: FormData) => documentService.uploadDocument(formData),
   },
   certificates: {
-    status: () => request<{ message: string }>('/api/certificates', { baseUrl: MODULE_BASE_URLS.module1 }),
-    verify: (certificateId: string) =>
-      request<DigitalTrustCertificate>(`/api/certificates/${certificateId}/verify`, { baseUrl: MODULE_BASE_URLS.module1 }),
+    status: () => documentService.getCertificatesStatus(),
+    verify: (certificateId: string) => documentService.verifyCertificate(certificateId),
   },
 
-  // Module 2 (Thilina Dasun)
+  // Module 2 (Thilina Dasun) - Delegated to MarketplaceService
   listings: {
-    status: () => request<{ message: string }>('/api/listings', { baseUrl: MODULE_BASE_URLS.module2 }),
-    getAll: (params: Record<string, string> = {}) => {
-      const query = new URLSearchParams(params).toString();
-      return request<{ listings: ProjectListing[]; total?: number }>(`/api/listings${query ? `?${query}` : ''}`, {
-        baseUrl: MODULE_BASE_URLS.module2,
-      });
+    status: () => marketplaceService.getListingsStatus(),
+    getAll: async (params: Record<string, string> = {}) => {
+      const res = await marketplaceService.getAllListings(params);
+      return { listings: res.listings.map((l) => l.toJSON()), total: res.total };
     },
   },
   escrow: {
-    status: () => request<{ message: string }>('/api/escrow', { baseUrl: MODULE_BASE_URLS.module2 }),
-    fund: (payload: { projectId: string; amount: number }) =>
-      request<EscrowRecord>('/api/escrow/fund', {
-        baseUrl: MODULE_BASE_URLS.module2,
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }),
-    release: (payload: { escrowId: string }) =>
-      request('/api/escrow/release', {
-        baseUrl: MODULE_BASE_URLS.module2,
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }),
-    getHistory: (escrowId: string) =>
-      request<EscrowRecord>(`/api/escrow/${escrowId}/history`, {
-        baseUrl: MODULE_BASE_URLS.module2,
-      }),
+    status: () => marketplaceService.getEscrowStatus(),
+    fund: async (payload: { projectId: string; amount: number }) => {
+      const record = await marketplaceService.fundEscrow(payload);
+      return record.toJSON();
+    },
+    release: (payload: { escrowId: string }) => marketplaceService.releaseEscrow(payload),
+    getHistory: async (escrowId: string) => {
+      const record = await marketplaceService.getEscrowHistory(escrowId);
+      return record.toJSON();
+    },
   },
   transfers: {
-    status: () => request<{ message: string }>('/api/transfers', { baseUrl: MODULE_BASE_URLS.module2 }),
+    status: () => marketplaceService.getTransfersStatus(),
     p2p: (payload: { escrowId: string; amount: number; buyerAddress: string }) =>
-      request<P2PTransferResult>('/api/transfers/p2p', {
-        baseUrl: MODULE_BASE_URLS.module2,
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }),
+      marketplaceService.transferP2P(payload),
   },
 
-  // Module 3 (Imesha Ariyawansha)
+  // Module 3 (Imesha Ariyawansha) - Delegated to ChatbotService
   mcp: {
-    status: () => request<{ message: string }>('/api/mcp', { baseUrl: MODULE_BASE_URLS.module3 }),
-    query: (payload: { query: string; sessionId?: string }) =>
-      request<{ sessionId: string; response: string; reasoning?: any; sources?: any[]; confidence?: number }>('/api/mcp/query', {
-        baseUrl: MODULE_BASE_URLS.module3,
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }),
+    status: () => chatbotService.getMcpStatus(),
+    query: (payload: { query: string; sessionId?: string }) => chatbotService.queryMcp(payload),
   },
   chatbot: {
-    status: () => request<{ message: string }>('/api/chatbot', { baseUrl: MODULE_BASE_URLS.module3 }),
-    createSession: (payload: Record<string, any> = {}) =>
-      request<{ sessionId: string }>('/api/chatbot/session', {
-        baseUrl: MODULE_BASE_URLS.module3,
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }),
+    status: () => chatbotService.getChatbotStatus(),
+    createSession: (payload: Record<string, any> = {}) => chatbotService.createSession(payload),
   },
   scam: {
-    status: () => request<{ message: string }>('/api/scam', { baseUrl: MODULE_BASE_URLS.module3 }),
-    check: (payload: { pitchText?: string; projectId?: string }) =>
-      request<ScamCheckResult>('/api/scam/check', {
-        baseUrl: MODULE_BASE_URLS.module3,
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }),
-    getAuditLog: () =>
-      request<{ flags: ScamAuditRecord[] }>('/api/scam/audit-log', {
-        baseUrl: MODULE_BASE_URLS.module3,
-      }),
+    status: () => chatbotService.getScamStatus(),
+    check: async (payload: { pitchText?: string; projectId?: string }) => {
+      const analysis = await chatbotService.checkScam(payload);
+      return analysis.toJSON();
+    },
+    getAuditLog: () => chatbotService.getScamAuditLog(),
   },
 
-  // Module 4 (Yasuri Pradeepika)
+  // Module 4 (Yasuri Pradeepika) - Delegated to GeofenceService
   projects: {
-    status: () => request<{ message: string }>('/api/projects', { baseUrl: MODULE_BASE_URLS.module4 }),
-    register: (payload: any) =>
-      request('/api/projects/register', {
-        baseUrl: MODULE_BASE_URLS.module4,
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }),
-    getTimeline: (projectId: string) =>
-      request<{ projectId: string; milestones: MilestoneTimelineItem[] }>(`/api/projects/${projectId}/timeline`, {
-        baseUrl: MODULE_BASE_URLS.module4,
-      }),
+    status: () => geofenceService.getProjectsStatus(),
+    register: (payload: any) => geofenceService.registerProject(payload),
+    getTimeline: (projectId: string) => geofenceService.getTimeline(projectId),
   },
   reports: {
-    status: () => request<{ message: string }>('/api/reports', { baseUrl: MODULE_BASE_URLS.module4 }),
-    submit: (formData: FormData) =>
-      request<MilestoneReportResult>('/api/reports/submit', {
-        baseUrl: MODULE_BASE_URLS.module4,
-        method: 'POST',
-        body: formData,
-        isFormData: true,
-      }),
+    status: () => geofenceService.getReportsStatus(),
+    submit: (formData: FormData) => geofenceService.submitReport(formData),
   },
   geofence: {
-    status: () => request<{ message: string }>('/api/geofence', { baseUrl: MODULE_BASE_URLS.module4 }),
+    status: () => geofenceService.getGeofenceStatus(),
   },
 
-  // Module 5 (Mirath Nimsara)
+  // Module 5 (Mirath Nimsara) - Delegated to AuditService
   audit: {
-    status: () => request<{ message: string }>('/api/audit', { baseUrl: MODULE_BASE_URLS.module5 }),
-    anchor: (payload: any) =>
-      request('/api/audit/anchor', {
-        baseUrl: MODULE_BASE_URLS.module5,
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }),
-    verify: (anchorId: string) =>
-      request<MerkleProofResult>(`/api/audit/verify/${anchorId}`, {
-        baseUrl: MODULE_BASE_URLS.module5,
-      }),
+    status: () => auditService.getAuditStatus(),
+    anchor: (payload: any) => auditService.anchor(payload),
+    verify: (anchorId: string) => auditService.verify(anchorId),
   },
   trustIndex: {
-    status: () => request<{ message: string }>('/api/trust-index', { baseUrl: MODULE_BASE_URLS.module5 }),
-    get: (id: string) =>
-      request<TrustIndex>(`/api/trust-index/${id}`, {
-        baseUrl: MODULE_BASE_URLS.module5,
-      }),
+    status: () => auditService.getTrustIndexStatus(),
+    get: async (id: string) => {
+      const ti = await auditService.getTrustIndex(id);
+      return ti.toJSON();
+    },
   },
   verify: {
-    status: () => request<{ message: string }>('/api/verify', { baseUrl: MODULE_BASE_URLS.module5 }),
+    status: () => auditService.getVerifyStatus(),
   },
 
   // Backward-compatibility module aliases
   module1: {
-    get: (ep: string, opt?: RequestOptions) => request(ep, { ...opt, baseUrl: MODULE_BASE_URLS.module1, method: 'GET' }),
-    post: (ep: string, body?: any, opt?: RequestOptions) => request(ep, { ...opt, baseUrl: MODULE_BASE_URLS.module1, method: 'POST', body: JSON.stringify(body) }),
+    get: (ep: string, opt?: RequestOptions) =>
+      apiClient.request(ep, { ...opt, baseUrl: process.env.NEXT_PUBLIC_MODULE1_URL, method: 'GET' }),
+    post: (ep: string, body?: any, opt?: RequestOptions) =>
+      apiClient.request(ep, { ...opt, baseUrl: process.env.NEXT_PUBLIC_MODULE1_URL, method: 'POST', body: JSON.stringify(body) }),
   },
   module2: {
-    get: (ep: string, opt?: RequestOptions) => request(ep, { ...opt, baseUrl: MODULE_BASE_URLS.module2, method: 'GET' }),
-    post: (ep: string, body?: any, opt?: RequestOptions) => request(ep, { ...opt, baseUrl: MODULE_BASE_URLS.module2, method: 'POST', body: JSON.stringify(body) }),
+    get: (ep: string, opt?: RequestOptions) =>
+      apiClient.request(ep, { ...opt, baseUrl: process.env.NEXT_PUBLIC_MODULE2_URL, method: 'GET' }),
+    post: (ep: string, body?: any, opt?: RequestOptions) =>
+      apiClient.request(ep, { ...opt, baseUrl: process.env.NEXT_PUBLIC_MODULE2_URL, method: 'POST', body: JSON.stringify(body) }),
   },
   module3: {
-    get: (ep: string, opt?: RequestOptions) => request(ep, { ...opt, baseUrl: MODULE_BASE_URLS.module3, method: 'GET' }),
-    post: (ep: string, body?: any, opt?: RequestOptions) => request(ep, { ...opt, baseUrl: MODULE_BASE_URLS.module3, method: 'POST', body: JSON.stringify(body) }),
+    get: (ep: string, opt?: RequestOptions) =>
+      apiClient.request(ep, { ...opt, baseUrl: process.env.NEXT_PUBLIC_MODULE3_URL, method: 'GET' }),
+    post: (ep: string, body?: any, opt?: RequestOptions) =>
+      apiClient.request(ep, { ...opt, baseUrl: process.env.NEXT_PUBLIC_MODULE3_URL, method: 'POST', body: JSON.stringify(body) }),
   },
   module4: {
-    get: (ep: string, opt?: RequestOptions) => request(ep, { ...opt, baseUrl: MODULE_BASE_URLS.module4, method: 'GET' }),
-    post: (ep: string, body?: any, opt?: RequestOptions) => request(ep, { ...opt, baseUrl: MODULE_BASE_URLS.module4, method: 'POST', body: JSON.stringify(body) }),
+    get: (ep: string, opt?: RequestOptions) =>
+      apiClient.request(ep, { ...opt, baseUrl: process.env.NEXT_PUBLIC_MODULE4_URL, method: 'GET' }),
+    post: (ep: string, body?: any, opt?: RequestOptions) =>
+      apiClient.request(ep, { ...opt, baseUrl: process.env.NEXT_PUBLIC_MODULE4_URL, method: 'POST', body: JSON.stringify(body) }),
   },
   module5: {
-    get: (ep: string, opt?: RequestOptions) => request(ep, { ...opt, baseUrl: MODULE_BASE_URLS.module5, method: 'GET' }),
-    post: (ep: string, body?: any, opt?: RequestOptions) => request(ep, { ...opt, baseUrl: MODULE_BASE_URLS.module5, method: 'POST', body: JSON.stringify(body) }),
+    get: (ep: string, opt?: RequestOptions) =>
+      apiClient.request(ep, { ...opt, baseUrl: process.env.NEXT_PUBLIC_MODULE5_URL, method: 'GET' }),
+    post: (ep: string, body?: any, opt?: RequestOptions) =>
+      apiClient.request(ep, { ...opt, baseUrl: process.env.NEXT_PUBLIC_MODULE5_URL, method: 'POST', body: JSON.stringify(body) }),
   },
 };
 
