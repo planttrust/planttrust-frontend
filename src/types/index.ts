@@ -296,9 +296,12 @@ export interface MerkleProofResult {
   dataHash: string;
   merkleRoot: string;
   merkleProof: string[];
-  txHash: string;
+  txHash: string | null;
   verified: boolean;
-  explorerUrl: string;
+  status?: string;
+  isMock?: boolean;
+  message?: string;
+  explorerUrl: string | null;
 }
 
 // ─── System Health ──────────────────────────────────────────────────────
