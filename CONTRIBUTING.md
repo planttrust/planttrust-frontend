@@ -13,7 +13,9 @@ Modules communicate with each other **only through defined APIs** — never by o
   - **`planttrust-frontend`** (this repo) — the Next.js frontend app with shared design system, contracts, and modular route pages.
 - **`main`** — always stable and demo-ready. Protected: PR + review required, no direct pushes. Only updated from `develop` after a checkpoint's integration test has passed.
 - **`develop`** — the shared weekly integration baseline. Protected: PR + at least one review required.
-- **`feature/<module>/<short-ticket-name>`** — one branch per GitHub issue, branched from `develop`, merged back into `develop` via PR.
+- **`feature/m<module>/f<NN>-<short-name>`** — one branch per feature from the feature order (e.g. `feature/m4/f04-project-registration`), branched from `develop`, opened by that module's owner.
+- **`infra/<short-name>`** — shared infrastructure (architecture, CI, schema, shared utilities, releases), owned by the team leader.
+- **`fix/<short-name>`** — bug fixes.
 
 ## 3. Opening a pull request
 
@@ -22,6 +24,8 @@ Modules communicate with each other **only through defined APIs** — never by o
 3. Target `develop`, not `main`.
 4. Tag the module owner most likely to be affected as reviewer (CODEOWNERS will often do this automatically).
 5. Don't merge your own PR without at least one review.
+6. **The module owner opens the PR for their module's feature**, writes its description, and fills in *Type*, *Feature #* and *Module lead* in the template. Infrastructure PRs are opened by the team leader.
+7. Teammates who paired on the feature review it. Anyone who wrote a substantial part of the code is credited with a `Co-authored-by: Name <email>` trailer on the relevant commit.
 
 ## 4. Define interfaces before writing code (API contracts)
 
@@ -67,43 +71,30 @@ Clone both repos side-by-side:
 
 ```
 parent-dir/
-├── planttrust-frontend/     # This repo (backend)
-└── planttrust-frontend/    # Frontend repo
+├── planttrust-backend/     # Backend repo
+└── planttrust-frontend/    # This repo (frontend)
 ```
 
 Then use Docker Compose (`docker-compose up` from the backend repo root) to bring up the entire system — all five backend modules plus the frontend — on any member's machine. Without this, "it works on my machine" failures only surface at the weekly integration meeting instead of before it.
 
-## 7. Weekly integration ritual
+## 7. Feature-by-feature workflow
 
-This is the fixed weekly process tied to the checkpoint schedule:
+The team builds **one feature at a time, together**, rotating through the modules (M1 → M2 → M3 → M4 → M5 → back to M1). The full order is tracked in ClickUp with tags `f01`–`f29` and in the team plan on Drive.
 
-1. **Freeze and pull** — Each member finishes their week's tickets, pushes to their feature branch, and opens a PR against `develop`. No new feature work starts until integration is done.
-2. **Merge in dependency order** — Module 1 first (others depend on it), then Modules 2 and 4 in parallel, then Module 3, then Module 5 last (it consumes everyone else's output).
-3. **Pair on conflicts live** — Whoever owns each side of a merge conflict resolves it together on a short call, rather than one person guessing the other's intent.
-4. **Run that week's smoke test** — Actually execute the checkpoint's target feature end-to-end against the merged `develop` branch.
-5. **Demo to the team** — Whoever's module was central to that week's integration walks the others through it live.
-6. **Log tickets and flag blockers** — Update the GitHub issue tracker; flag anything under ~50% complete immediately, don't wait.
-7. **Re-baseline** — Once verified, `develop` is the new starting point for next week's tickets.
+1. **Kickoff (~30 min)** — The module owner explains the feature; the team agrees the API shape in `contracts/` and the screens.
+2. **Build** — The module owner writes the code; the rest of the team pairs (suggests, debugs, reviews as it goes). Backend and frontend are built together.
+3. **PR** — The module owner opens one PR per repo into `develop`, linking the ClickUp task IDs.
+4. **Review** — At least one teammate approves (two preferred) and CI passes.
+5. **Merge & demo** — 5-minute demo to the team; ClickUp tasks move to *complete*.
+6. **Next feature** — move to the next module in the order.
 
-## 8. Worked example: Checkpoints 1–2
+**Definition of done:** backend endpoint with tests, frontend screen wired to it, contract doc updated, merged and working on `develop`.
 
-### Checkpoint 1 (Weeks 1–2)
+**Checkpoints:** before each review checkpoint, the team leader merges `develop` → `main` so reviewers see the latest working state of all five modules.
 
-- **Module 1** builds the real registration/login API and schema — no upstream dependency.
-- **Module 2** designs its Escrow Ledger schema and writes funding-flow logic against a hardcoded fake Investor ID (M1's real auth isn't ready yet).
-- **Module 3** and **Module 4** build their schemas and start standalone pieces (MCP skeleton; nothing needs another module yet).
-- **Module 5** builds its audit schema and a stub `/api/audit/anchor` that just logs to a table — no real XRPL call yet — so the other four have something real to call.
-- **Integration meeting:** confirm the five schemas don't conflict on shared fields (project IDs, user IDs), and demo M1's login end-to-end.
+## 8. Mocks still apply
 
-### Checkpoint 2 (Weeks 3–4)
-
-- **Module 1** finishes OCR + HITL + cert issuance, calls M5's now-real `/api/audit/anchor` (M5 upgrades its stub to a real XRPL Testnet hash call).
-- **Module 2** swaps its hardcoded fake Investor ID for a real call to M1's now-working auth API — this is the mock being retired exactly as described in Section 5.
-- **Module 3** builds its scam-typology matcher fully standalone, still with no cross-module dependency.
-- **Module 4** builds its EXIF extraction pipeline standalone.
-- **Integration meeting:** demo that issuing a certificate in M1 produces a real, verifiable hash anchored on XRPL — the first genuine cross-module feature.
-
-The same pattern repeats for Checkpoints 3–7: the upstream module builds the real version, the downstream module retires its mock, and the checkpoint's target feature is what gets demoed.
+Because features are built in rotation, a feature may need an endpoint from a module whose turn hasn't come yet. Use the mocking rule in Section 5: agree the shape in `contracts/`, build against a stub, and swap in the real call when that module's feature lands.
 
 ## 9. Automated integration checks (CI)
 
