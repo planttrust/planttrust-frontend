@@ -13,7 +13,7 @@ Modules communicate with each other **only through defined APIs** — never by o
   - **`planttrust-frontend`** (this repo) — the Next.js frontend app with shared design system, contracts, and modular route pages.
 - **`main`** — always stable and demo-ready. Protected: PR + review required, no direct pushes. Only updated from `develop` after a checkpoint's integration test has passed.
 - **`develop`** — the shared weekly integration baseline. Protected: PR + at least one review required.
-- **`feature/m<module>/f<NN>-<short-name>`** — one branch per feature from the feature order (e.g. `feature/m4/f04-project-registration`), branched from `develop`, opened by that module's owner.
+- **`feature/m<module>/s<sprint>-<short-name>`** — one branch per module piece in a sprint (e.g. `feature/m4/s1-project-registration`), branched from `develop`, created and owned by that module's owner.
 - **`infra/<short-name>`** — shared infrastructure (architecture, CI, schema, shared utilities, releases), owned by the team leader.
 - **`fix/<short-name>`** — bug fixes.
 
@@ -24,8 +24,8 @@ Modules communicate with each other **only through defined APIs** — never by o
 3. Target `develop`, not `main`.
 4. Tag the module owner most likely to be affected as reviewer (CODEOWNERS will often do this automatically).
 5. Don't merge your own PR without at least one review.
-6. **The module owner opens the PR for their module's feature**, writes its description, and fills in *Type*, *Feature #* and *Module lead* in the template. Infrastructure PRs are opened by the team leader.
-7. Teammates who paired on the feature review it. Anyone who wrote a substantial part of the code is credited with a `Co-authored-by: Name <email>` trailer on the relevant commit.
+6. **Each module owner opens the PRs for their own module**, and fills in *Sprint*, *System feature* and *ClickUp tasks* in the template. Infrastructure PRs are opened by the team leader.
+7. Teammates review each other's PRs. If anyone else writes a substantial part of a change, credit them with a `Co-authored-by: Name <email>` trailer.
 
 ## 4. Define interfaces before writing code (API contracts)
 
@@ -77,24 +77,30 @@ parent-dir/
 
 Then use Docker Compose (`docker-compose up` from the backend repo root) to bring up the entire system — all five backend modules plus the frontend — on any member's machine. Without this, "it works on my machine" failures only surface at the weekly integration meeting instead of before it.
 
-## 7. Feature-by-feature workflow
+## 7. Sprint workflow: build in your module, combine into one system feature
 
-The team builds **one feature at a time, together**, rotating through the modules (M1 → M2 → M3 → M4 → M5 → back to M1). The full order is tracked in ClickUp with tags `f01`–`f29` and in the team plan on Drive.
+The project runs in **five 2-week sprints** (16 Nov 2026 – 24 Jan 2027). Each sprint has **one system feature** as its goal. All five owners build **their own module's piece** of it in parallel, and at the end of the sprint the pieces are joined so the system can do one new thing end to end.
 
-1. **Kickoff (~30 min)** — The module owner explains the feature; the team agrees the API shape in `contracts/` and the screens.
-2. **Build** — The module owner writes the code; the rest of the team pairs (suggests, debugs, reviews as it goes). Backend and frontend are built together.
-3. **PR** — The module owner opens one PR per repo into `develop`, linking the ClickUp task IDs.
-4. **Review** — At least one teammate approves (two preferred) and CI passes.
-5. **Merge & demo** — 5-minute demo to the team; ClickUp tasks move to *complete*.
-6. **Next feature** — move to the next module in the order.
+| Sprint | Dates | System feature |
+|---|---|---|
+| 1 | 16–29 Nov | A company joins and lists a project |
+| 2 | 30 Nov – 13 Dec | An investor funds a verified project |
+| 3 | 14–27 Dec | Progress is verified and money is released |
+| 4 | 28 Dec – 10 Jan | Everything is proven on-chain |
+| 5 | 11–24 Jan | Polish and full end-to-end demo |
 
-**Definition of done:** backend endpoint with tests, frontend screen wired to it, contract doc updated, merged and working on `develop`.
+Which ClickUp tasks belong to each sprint is tracked with tags `sprint-1` … `sprint-5`; the full breakdown is in the team plan on Drive.
 
-**Checkpoints:** before each review checkpoint, the team leader merges `develop` → `main` so reviewers see the latest working state of all five modules.
+1. **Day 1: contracts** — Owners agree the API shapes between their pieces in `contracts/`.
+2. **Days 2–11: build** — Each owner builds their piece on `feature/m<N>/s<sprint>-...` and opens their own PR into `develop`. Mock anything another module hasn't built yet (Section 5).
+3. **Days 12–13: integrate** — Merge the five PRs into `develop` in dependency order (M1 first, M5 last), swap mocks for real calls, resolve conflicts together.
+4. **Day 14: demo** — Run the sprint's system feature end to end. The team leader merges `develop` → `main`; ClickUp tasks move to *complete*.
 
-## 8. Mocks still apply
+**Definition of done (per piece):** backend endpoint with tests, frontend screen wired to it, contract doc updated, merged into `develop` and working in the combined demo.
 
-Because features are built in rotation, a feature may need an endpoint from a module whose turn hasn't come yet. Use the mocking rule in Section 5: agree the shape in `contracts/`, build against a stub, and swap in the real call when that module's feature lands.
+## 8. Mocks within a sprint
+
+Pieces in the same sprint are built in parallel, so a piece will often need an endpoint that another owner is building at the same time. Use the rule in Section 5: agree the shape on Day 1, build against a stub, and switch to the real call during integration.
 
 ## 9. Automated integration checks (CI)
 
