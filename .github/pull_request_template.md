@@ -3,6 +3,11 @@
 Brief summary of the changes introduced in this pull request and the rationale behind them.
 
 - **Module:** [ ] M1 — User Management | [ ] M2 — Marketplace | [ ] M3 — MCP AI | [ ] M4 — Geofencing | [ ] M5 — Blockchain | [ ] Shared/UI Components
+- **Type of work:** [ ] Module feature | [ ] Infrastructure (team leader) | [ ] Bug fix
+- **Sprint:** [ ] 1 | [ ] 2 | [ ] 3 | [ ] 4 | [ ] 5
+- **System feature this piece belongs to:** <!-- e.g. Sprint 1: A company joins and lists a project -->
+- **Module owner (PR author):** @<!-- your GitHub handle -->
+- **ClickUp tasks:** #<!-- task id(s) -->
 - **Closes Issue:** Fixes #<!-- issue number -->
 
 ---
