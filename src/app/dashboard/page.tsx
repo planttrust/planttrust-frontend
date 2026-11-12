@@ -60,12 +60,14 @@ export default function DashboardPage() {
       setVerifyResult({
         anchorId: 'anc-m1-7781-merkle',
         dataHash: verifyInput.trim(),
-        merkleRoot: '7a2b9184c910482b91a429e849201a84928194d8129481928491025f1a8c92b4',
+        merkleRoot: '5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9',
         merkleProof: ['0x48a1...hash_sibling_1', '0x992b...hash_sibling_2'],
-        txHash: '4A9D3F82E5C9A17482D42079148F2A8CD996B34A9988D4D6B9C23145E7A29F31',
-        verified: true,
-        explorerUrl:
-          'https://testnet.xrpl.org/transactions/4A9D3F82E5C9A17482D42079148F2A8CD996B34A9988D4D6B9C23145E7A29F31',
+        txHash: null,
+        verified: false,
+        status: 'UNVERIFIED_SCAFFOLD',
+        isMock: true,
+        message: 'Scaffolded verification (offline mock) - live XRPL Testnet verification will be enabled in Checkpoint 2',
+        explorerUrl: null,
       });
     } finally {
       setVerifying(false);
@@ -391,8 +393,20 @@ export default function DashboardPage() {
             <div className="card-header">
               <h3 className="text-lg font-semibold text-white">On-Chain Inclusion Proof Status</h3>
               {verifyResult && (
-                <span className={`badge ${verifyResult.verified ? 'badge-emerald' : 'badge-rose'}`}>
-                  {verifyResult.verified ? 'Cryptographically Proven' : 'Verification Failed'}
+                <span
+                  className={`badge ${
+                    verifyResult.verified
+                      ? 'badge-emerald'
+                      : verifyResult.isMock || verifyResult.status === 'UNVERIFIED_SCAFFOLD'
+                      ? 'badge-purple'
+                      : 'badge-rose'
+                  }`}
+                >
+                  {verifyResult.verified
+                    ? 'Cryptographically Proven'
+                    : verifyResult.isMock || verifyResult.status === 'UNVERIFIED_SCAFFOLD'
+                    ? 'Unverified Scaffold (Mock)'
+                    : 'Verification Failed'}
                 </span>
               )}
             </div>
@@ -407,27 +421,40 @@ export default function DashboardPage() {
                 </div>
                 <div className="meta-row">
                   <span className="meta-key">Inclusion Proof:</span>
-                  <span className="meta-val text-emerald">
-                    Valid Merkle Path to Root ({verifyResult.merkleProof?.length || 2} Siblings)
+                  <span className={`meta-val ${verifyResult.verified ? 'text-emerald' : 'text-slate-300'}`}>
+                    {verifyResult.verified
+                      ? `Valid Merkle Path to Root (${verifyResult.merkleProof?.length || 2} Siblings)`
+                      : `Scaffold Merkle Path (${verifyResult.merkleProof?.length || 0} Siblings — Unanchored)`}
                   </span>
                 </div>
                 <div className="meta-row">
                   <span className="meta-key">XRPL Transaction:</span>
                   <span className="meta-val text-xs break-all">
-                    <a
-                      href={verifyResult.explorerUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="link-btn"
-                    >
-                      {verifyResult.txHash} ↗
-                    </a>
+                    {verifyResult.txHash && verifyResult.explorerUrl ? (
+                      <a
+                        href={verifyResult.explorerUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="link-btn"
+                      >
+                        {verifyResult.txHash} ↗
+                      </a>
+                    ) : (
+                      <span className="text-slate-400">Pending XRPL Testnet Anchor (Checkpoint 2)</span>
+                    )}
                   </span>
                 </div>
 
-                <div className="alert-box alert-emerald mt-5">
-                  Event is mathematically guaranteed to have existed at ledger commitment timestamp without tampering.
-                </div>
+                {verifyResult.verified ? (
+                  <div className="alert-box alert-emerald mt-5">
+                    Event is mathematically guaranteed to have existed at ledger commitment timestamp without tampering.
+                  </div>
+                ) : (
+                  <div className="info-box mt-5 text-xs text-slate-300">
+                    {verifyResult.message ||
+                      'Scaffolded verification response — live XRPL Testnet verification will be enabled in Checkpoint 2.'}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="empty-state">
