@@ -1,0 +1,37 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Colours: Figma variables, collection "Plantrust" */
+  --color-brand: #176b43;
+  --color-ink: #24382d;
+  --color-muted: #617569;
+  --color-surface: #ffffff;
+  --color-background: #f5f7f5;
+  --color-border: #dce5df;
+  --color-tint: #eaf2ed;
+
+  /* Font: Nunito, loaded in layout.tsx */
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+
+  /* Text styles: Figma "Plantrust" text styles (line height 145%) */
+  --text-title: 30px;
+  --text-title--line-height: 1.45;
+  --text-title--font-weight: 700;
+  --text-heading: 20px;
+  --text-heading--line-height: 1.45;
+  --text-heading--font-weight: 700;
+  --text-body: 15px;
+  --text-body--line-height: 1.45;
+  --text-label: 14px;
+  --text-label--line-height: 1.45;
+  --text-label--font-weight: 700;
+  --text-caption: 12px;
+  --text-caption--line-height: 1.45;
+
+  /* Buttons and fields: 14px text on a 22px line, as in the Figma components */
+  --text-control: 14px;
+  --text-control--line-height: 22px;
+
+  /* Corner radius of buttons and fields */
+  --radius-control: 10px;
+}

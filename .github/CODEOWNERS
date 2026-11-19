@@ -1,0 +1,19 @@
+# GitHub automatically asks these people to review PRs that change their files.
+# Last matching line wins.
+
+*                                   @Kaveesha-04
+
+/src/modules/m1-users/              @Kaveesha-04
+/src/app/(m1)/                      @Kaveesha-04
+
+/src/modules/m2-marketplace/        @DasunWTT
+/src/app/(m2)/                      @DasunWTT
+
+/src/modules/m3-mcp-ai/             @sandadewi
+/src/app/(m3)/                      @sandadewi
+
+/src/modules/m4-geofencing/         @yasuripradeepika
+/src/app/(m4)/                      @yasuripradeepika
+
+/src/modules/m5-audit/              @Mirath-Nimsara
+/src/app/(m5)/                      @Mirath-Nimsara
