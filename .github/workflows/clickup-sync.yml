@@ -1,0 +1,82 @@
+# Keeps ClickUp in step with GitHub issues.
+# Each issue links its ClickUp task (https://app.clickup.com/t/<id>), and every
+# sprint task has one issue in planttrust-backend and one in planttrust-frontend.
+#  - Issue closed: if the matching issue in the other repo is also closed, the
+#    ClickUp task is set to "complete"; otherwise a progress comment is added.
+#  - Issue reopened: a "complete" task goes back to "in progress".
+# Needs the repository secret CLICKUP_API_TOKEN (a ClickUp personal API token).
+name: ClickUp sync
+
+on:
+  issues:
+    types: [closed, reopened]
+
+permissions:
+  issues: read
+
+concurrency:
+  group: clickup-sync-${{ github.event.issue.number }}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update the linked ClickUp task
+        env:
+          CLICKUP_API_TOKEN: ${{ secrets.CLICKUP_API_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          ACTION: ${{ github.event.action }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CLICKUP_API_TOKEN:-}" ]; then
+            echo "::warning::CLICKUP_API_TOKEN secret is not set, skipping ClickUp sync"
+            exit 0
+          fi
+
+          TASK_ID=$(printf '%s' "${ISSUE_BODY:-}" | grep -oE 'app\.clickup\.com/t/[A-Za-z0-9]+' | head -n1 | cut -d/ -f3 || true)
+          if [ -z "$TASK_ID" ]; then
+            echo "No ClickUp link in this issue, nothing to do"
+            exit 0
+          fi
+
+          case "$REPO" in
+            */planttrust-backend)  THIS=backend;  OTHER=frontend; OTHER_REPO=planttrust/planttrust-frontend ;;
+            */planttrust-frontend) THIS=frontend; OTHER=backend;  OTHER_REPO=planttrust/planttrust-backend ;;
+            *) echo "Unknown repository $REPO"; exit 1 ;;
+          esac
+
+          clickup() {
+            curl -fsS -H "Authorization: $CLICKUP_API_TOKEN" -H "Content-Type: application/json" "$@"
+          }
+          comment() {
+            clickup -X POST "https://api.clickup.com/api/v2/task/$TASK_ID/comment" \
+              -d "$(jq -n --arg t "$1" '{comment_text: $t, notify_all: false}')" > /dev/null
+          }
+          set_status() {
+            clickup -X PUT "https://api.clickup.com/api/v2/task/$TASK_ID" \
+              -d "$(jq -n --arg s "$1" '{status: $s}')" > /dev/null
+          }
+
+          if [ "$ACTION" = "closed" ]; then
+            OTHER_STATE=$(gh issue list -R "$OTHER_REPO" --state all --limit 500 --json state,body \
+              | jq -r --arg id "$TASK_ID" '[.[] | select((.body // "") | contains("clickup.com/t/" + $id))][0].state // "NONE"')
+            if [ "$OTHER_STATE" = "OPEN" ]; then
+              comment "GitHub: the $THIS issue was closed ($ISSUE_URL). Waiting for the $OTHER issue."
+              echo "Task $TASK_ID: $THIS closed, $OTHER still open"
+            else
+              set_status "complete"
+              comment "GitHub: the $THIS issue was closed ($ISSUE_URL) and the $OTHER issue is closed too, so this task is complete."
+              echo "Task $TASK_ID set to complete"
+            fi
+          else
+            CURRENT=$(clickup "https://api.clickup.com/api/v2/task/$TASK_ID" | jq -r '.status.status')
+            if [ "$CURRENT" = "complete" ]; then
+              set_status "in progress"
+            fi
+            comment "GitHub: the $THIS issue was reopened ($ISSUE_URL)."
+            echo "Task $TASK_ID: $THIS reopened (was $CURRENT)"
+          fi
