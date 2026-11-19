@@ -23,7 +23,7 @@ PlantTrust is built by five people, and each person owns one module. This guide 
 
 ## One-time setup
 
-1. Install Git, Node.js 20 LTS, Docker Desktop and VS Code.
+1. Install Git, Node.js 24 LTS, Docker Desktop and VS Code.
 2. Accept the GitHub invitation to the `planttrust` organisation, and check you can open the ClickUp folder "PlantTrust Sprints".
 3. Start the backend first (see the backend guide), then clone and start the frontend (PowerShell):
 
