@@ -12,13 +12,14 @@ PlantTrust is built by five people, and each person owns one module. This guide 
 | M4 Company Portal & Geofencing          | Yasuri  | `src/modules/m4-geofencing/`  | `src/app/(m4)/` |
 | M5 Blockchain Audit & Trust Index       | Mirath  | `src/modules/m5-audit/`       | `src/app/(m5)/` |
 
-`src/shared/` (the API client, auth context, and shared UI like Button, Field, Card and the layouts) is shared infrastructure. Changes to it go through the team leader.
+`src/shared/` (the API client, `AuthProvider` / `useAuth()`, and shared UI: `Button`, `Field`, `ModulePlaceholder`) is shared infrastructure. Changes to it go through the team leader.
 
 ## How the frontend is organised
 
 - Pages in `src/app/(mX)/` stay thin and render components from `src/modules/mX-*/`. The `(mX)` route groups don't appear in the URL; they only keep each person's pages together.
-- Call the backend only through the API client in `src/shared/`. It reads the backend URL from `NEXT_PUBLIC_API_URL`.
-- Until a backend route exists, return mock data from your module's API file. When the route is ready, switch to the real call. The backend contract for each module is in `planttrust-backend/contracts/`.
+- Call the backend only through `apiRequest()` in `src/shared/api/client.ts`, with paths like `/api/users/me`. The browser calls the frontend's own address, and Next.js forwards `/api/...` to the backend at `BACKEND_URL` (set in `.env.local`).
+- **Login:** never store or read a token. The backend keeps the login in an httpOnly cookie; use `useAuth()` to know who is logged in.
+- Until a backend route exists, return data from your module's `mocks.ts` with `withMockFallback()`. When the route is ready, it uses the real call. `NEXT_PUBLIC_USE_MOCKS=true` in `.env.local` turns on mocks everywhere. The backend contract for each module is in `planttrust-backend/contracts/`.
 - Follow the Figma designs and use the shared components instead of restyling your own.
 
 ## One-time setup
@@ -30,12 +31,13 @@ PlantTrust is built by five people, and each person owns one module. This guide 
 ```powershell
 git clone https://github.com/planttrust/planttrust-frontend
 cd planttrust-frontend
+git checkout develop          # we work from develop, not main
 Copy-Item .env.example .env.local
 npm install
 npm run dev
 ```
 
-4. Check your work with `npm run lint` and `npm run build`. CI runs both.
+4. Before you push, run the same checks as CI: `npm run format:check`, `npm run lint`, `npm run typecheck` and `npm run build` (`npm run format` fixes formatting).
 
 ## Workflow for every task
 
