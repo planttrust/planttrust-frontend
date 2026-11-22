@@ -13,4 +13,4 @@
 - [ ] Follows the Figma design and uses the shared tokens and components (`src/shared/ui`)
 - [ ] Loading, empty and error states handled
 - [ ] Types in `types.ts` match the backend contract
-- [ ] `npm run lint`, `npm run typecheck` and `npm run build` pass
+- [ ] `npm run format:check`, `npm run lint`, `npm run typecheck` and `npm run build` pass
